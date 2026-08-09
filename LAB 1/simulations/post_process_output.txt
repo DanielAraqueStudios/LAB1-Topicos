@@ -1,0 +1,3 @@
+K1 (subamortiguado, zeta=0.6) = [-12.8964 -2.14081 0.0401494], Ki1 = -17.4436
+K2 (critico, zeta=1.0)        = [-12.0121 -2.13063 0.0404062], Ki2 = -6.2797
+Listo. Figuras guardadas en C:\Users\danie\Desktop\LAB1-Topicos\simulations\figures

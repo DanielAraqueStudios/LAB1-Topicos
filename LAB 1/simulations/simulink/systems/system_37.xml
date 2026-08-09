@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<System>
+  <P Name="Location">[223, 338, 826, 833]</P>
+  <P Name="SIDHighWatermark">36</P>
+  <Block BlockType="Inport" Name="xf" SID="37::1">
+    <P Name="Position">[20, 101, 40, 119]</P>
+    <P Name="ZOrder">-1</P>
+  </Block>
+  <Block BlockType="Inport" Name="xr" SID="37::28">
+    <P Name="Position">[20, 136, 40, 154]</P>
+    <P Name="ZOrder">19</P>
+    <P Name="Port">2</P>
+  </Block>
+  <Block BlockType="Inport" Name="theta" SID="37::29">
+    <P Name="Position">[20, 171, 40, 189]</P>
+    <P Name="ZOrder">20</P>
+    <P Name="Port">3</P>
+  </Block>
+  <Block BlockType="Inport" Name="dxf" SID="37::30">
+    <P Name="Position">[20, 206, 40, 224]</P>
+    <P Name="ZOrder">21</P>
+    <P Name="Port">4</P>
+  </Block>
+  <Block BlockType="Inport" Name="dxr" SID="37::31">
+    <P Name="Position">[20, 246, 40, 264]</P>
+    <P Name="ZOrder">22</P>
+    <P Name="Port">5</P>
+  </Block>
+  <Block BlockType="Inport" Name="f" SID="37::32">
+    <P Name="Position">[20, 281, 40, 299]</P>
+    <P Name="ZOrder">23</P>
+    <P Name="Port">6</P>
+  </Block>
+  <Block BlockType="Inport" Name="p" SID="37::33">
+    <P Name="Position">[20, 316, 40, 334]</P>
+    <P Name="ZOrder">24</P>
+    <P Name="Port">7</P>
+  </Block>
+  <Block BlockType="Demux" Name=" Demux " SID="37::26">
+    <PortCounts in="1" out="1"/>
+    <P Name="Position">[270, 245, 320, 285]</P>
+    <P Name="ZOrder">17</P>
+    <P Name="Outputs">1</P>
+  </Block>
+  <Block BlockType="S-Function" Name=" SFunction " SID="37::25">
+    <P Name="Tag">Stateflow S-Function 2</P>
+    <PortCounts in="7" out="4"/>
+    <P Name="Position">[180, 110, 230, 270]</P>
+    <P Name="ZOrder">16</P>
+    <P Name="FunctionName">sf_sfun</P>
+    <P Name="PortCounts">[7 4]</P>
+    <P Name="SFunctionDeploymentMode">off</P>
+    <P Name="EnableBusSupport">off</P>
+    <P Name="SFcnIsStateOwnerBlock">off</P>
+    <PortProperties>
+      <Port Type="out" Index="2">
+        <P Name="Name">dtheta</P>
+      </Port>
+      <Port Type="out" Index="3">
+        <P Name="Name">ddxf</P>
+      </Port>
+      <Port Type="out" Index="4">
+        <P Name="Name">ddxr</P>
+      </Port>
+    </PortProperties>
+  </Block>
+  <Block BlockType="Terminator" Name=" Terminator " SID="37::27">
+    <P Name="Position">[460, 256, 480, 274]</P>
+    <P Name="ZOrder">18</P>
+  </Block>
+  <Block BlockType="Outport" Name="dtheta" SID="37::34">
+    <P Name="Position">[460, 101, 480, 119]</P>
+    <P Name="ZOrder">25</P>
+  </Block>
+  <Block BlockType="Outport" Name="ddxf" SID="37::35">
+    <P Name="Position">[460, 136, 480, 154]</P>
+    <P Name="ZOrder">26</P>
+    <P Name="Port">2</P>
+  </Block>
+  <Block BlockType="Outport" Name="ddxr" SID="37::36">
+    <P Name="Position">[460, 171, 480, 189]</P>
+    <P Name="ZOrder">27</P>
+    <P Name="Port">3</P>
+  </Block>
+  <Line>
+    <P Name="ZOrder">84</P>
+    <P Name="Src">37::1#out:1</P>
+    <P Name="Dst">37::25#in:1</P>
+  </Line>
+  <Line>
+    <P Name="ZOrder">85</P>
+    <P Name="Src">37::28#out:1</P>
+    <P Name="Dst">37::25#in:2</P>
+  </Line>
+  <Line>
+    <P Name="ZOrder">86</P>
+    <P Name="Src">37::29#out:1</P>
+    <P Name="Dst">37::25#in:3</P>
+  </Line>
+  <Line>
+    <P Name="ZOrder">87</P>
+    <P Name="Src">37::30#out:1</P>
+    <P Name="Dst">37::25#in:4</P>
+  </Line>
+  <Line>
+    <P Name="ZOrder">88</P>
+    <P Name="Src">37::31#out:1</P>
+    <P Name="Dst">37::25#in:5</P>
+  </Line>
+  <Line>
+    <P Name="ZOrder">89</P>
+    <P Name="Src">37::32#out:1</P>
+    <P Name="Dst">37::25#in:6</P>
+  </Line>
+  <Line>
+    <P Name="ZOrder">90</P>
+    <P Name="Src">37::33#out:1</P>
+    <P Name="Dst">37::25#in:7</P>
+  </Line>
+  <Line>
+    <P Name="Name">dtheta</P>
+    <P Name="ZOrder">91</P>
+    <P Name="Labels">[0, 0]</P>
+    <P Name="Src">37::25#out:2</P>
+    <P Name="Dst">37::34#in:1</P>
+  </Line>
+  <Line>
+    <P Name="Name">ddxf</P>
+    <P Name="ZOrder">92</P>
+    <P Name="Labels">[0, 0]</P>
+    <P Name="Src">37::25#out:3</P>
+    <P Name="Dst">37::35#in:1</P>
+  </Line>
+  <Line>
+    <P Name="Name">ddxr</P>
+    <P Name="ZOrder">93</P>
+    <P Name="Labels">[0, 0]</P>
+    <P Name="Src">37::25#out:4</P>
+    <P Name="Points">[5, 0; 0, -70]</P>
+    <P Name="Dst">37::36#in:1</P>
+  </Line>
+  <Line>
+    <P Name="ZOrder">94</P>
+    <P Name="Src">37::26#out:1</P>
+    <P Name="Dst">37::27#in:1</P>
+  </Line>
+  <Line>
+    <P Name="ZOrder">95</P>
+    <P Name="Src">37::25#out:1</P>
+    <P Name="Points">[15, 0; 0, 135]</P>
+    <P Name="Dst">37::26#in:1</P>
+  </Line>
+</System>

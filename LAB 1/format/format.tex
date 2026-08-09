@@ -1,0 +1,602 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[spanish]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{siunitx}
+\usepackage{lipsum}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{grffile}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  stringstyle=\color{teal},
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  xleftmargin=1.5em,
+  captionpos=b
+}
+
+\begin{document}
+
+\title{Sistema de Mezclado de Pintura}
+
+\author{
+    \IEEEauthorblockN{
+         Veronica Duarte, Daniela Mosquera, Daniel Garcia
+    }
+    \IEEEauthorblockA{Ingenier\'ia Mecatr\'onica\\
+    Universidad Militar Nueva Granada\\
+    Cajica, Colombia\\
+  }
+}
+
+
+
+\maketitle
+\begin{abstract}
+
+El presente proyecto detalla el dise\~no e implementaci\'on de una mezcladora autom\'atica de pintura controlada mediante una ESP32. el sistema utiliza bombas de diafragma para dosificar pinturas base de diferentes colores y un mecanismos de agitaci\'on para obtener una mezcla homog\'enea. la mezcladora tiene la capacidad de formular  hasta 36 colores y dispensar hasta 1/2 de gal\'on por ciclo de operaci\'on. ademas se realizo una interfaz gr\'afica para el monitoreo y supervisi\'on del proceso, el proyecto integra conectividad a la web mediante IoT para la visualizaci\'on en tiempo real del registro de los datos.
+
+\vspace{1em}
+\noindent \textbf{\textit{Palabras clave---}} ESP32, IoT, automatizaci\'on, mezcla de pinturas, bombas de diafragma.
+\end{abstract}
+
+\section{Introducci\'on}
+
+la evoluci\'on hacia la industria 4.0 exige procesos de manufactura precisos y conectados. con el fin de optimizar la dosificaci\'on, disminuir los desperdicios y garantizar la uniformidad del color. se desarrollo una mezcladora de pintura automatizada mediante una ESP 32, capaz de controlar la dosificaci\'on de pinturas base. Ademas, el sistema incorpora una interfaz grafica para el monitoreo de variables y conectividad IoT para la supervisi\'on remota del proceso.
+
+En las siguientes secciones de este informe se detalla la metodolog\'ia aplicada para el desarrollo del proyecto.incluyendo el cronograma de ejecuci\'on, el an\'alisis de costos, las referencias comerciales y los resultados de las simulaciones.
+
+\section{Objetivos}
+Dise\~nar e implementar un sistema automatizado para la dosificaci\'on y mezcla de pintura mediante un microcontrolador. capaz de dosificar pintura base, generar diferentes tonalidades de color y permitir el monitoreo del proceso mediante una interfaz gr\'afica y conectividad IoT.
+\subsection*{Objetivos Espec\'ificos}
+\begin{itemize}
+    \item Desarrollar la l\'ogica de control en el microcontrolador para el control y dosificaci\'on de la mezcladora de pintura
+    \item Dise\~nar una Interfaz Gr\'afica de Usuario  con tecnolog\'ia (IoT) para el monitoreo de variables.
+    \item Validar la l\'ogica de control y la interacci\'on de los actuadores del sistema a trav\'es de simulaciones en entornos virtuales (Factory IO y Automation Studio).
+    \item Estructurar la viabilidad t\'ecnica y econ\'omica del proyecto mediante la elaboraci\'on de un cronograma de ejecuci\'on y la cotizaci\'on de referencias comerciales a escala industrial.
+\end{itemize}
+
+\section{Marco Te\'orico}
+\subsection*{Bombas de Diafragma}
+Las bombas de diafragma son dispositivos utilizados para transportar l\'iquidos mediante el movimiento alternativo de una membrana flexible. Estas bombas son ampliamente empleadas en sistemas de dosificaci\'on debido a su precisi\'on, facilidad de control y capacidad para manejar diferentes tipos de fluidos. En este proyecto se utilizan para suministrar las pinturas base necesarias para la generaci\'on de diferentes colores.
+
+\subsection*{PWM}
+La modulaci\'on por ancho de pulso (PWM) es una t\'ecnica utilizada para controlar la potencia suministrada a dispositivos el\'ectricos mediante la variaci\'on del ciclo de trabajo de una se\~nal digital. Esta t\'ecnica permite regular la velocidad de motores de corriente continua de manera eficiente. En la mezcladora de pinturas se emplea PWM para controlar la velocidad del motor encargado de la agitaci\'on.
+
+\subsection*{IoT}
+El Internet de las Cosas (IoT) corresponde a la interconexi\'on de dispositivos f\'isicos a trav\'es de redes de comunicaci\'on, permitiendo el intercambio de informaci\'on en tiempo real. Esta tecnolog\'ia facilita el monitoreo y control remoto de procesos industriales, mejorando la supervisi\'on y la toma de decisiones.
+
+\subsection*{Sistemas de Mezcla de Fluidos}
+Los sistemas de mezcla tienen como objetivo obtener una distribuci\'on uniforme de los componentes que conforman una sustancia. En el caso de las pinturas, una adecuada agitaci\'on permite homogenizar los pigmentos y evitar diferencias de tonalidad, garantizando una mejor calidad del producto final.
+
+\section{Dise\~no y funcionamiento del sistema}
+Para el desarrollo del sistema se empleo un sistema de control utilizando  una ESP 32 como unidad principal de procesamiento, encargada de controlar la dosificaci\'on y el motor mezclador.
+
+La estructura mec\'anica est\'a compuesta por cuatro dep\'ositos de almacenamiento de pintura conectados mediante mangueras  al recipiente de mezcla. Cada deposito dispone de una bomba de diafragma de 12V encargada de suministrar una cantidad determinada de pintura al recipiente principal. las bombas son accionadas mediante un modulo puente H 298N controlados por ESP32.
+
+La alimentaci\'on del sistema se realiza mediante una fuente de 12V que subministra energ\'ia a las bombas, motores mezclador y m\'odulos de potencia. La reducci\'on del voltaje a 5V para alimentar adecuadamente la ESP 32 se lleva a cabo mediante un convertidor DC-DC LM2596. todos los elementos tiene un punto en com\'un a tierra para su correcto funcionamiento.
+
+El proceso de operaci\'on inicia cuando la ESP 32 calcula la proporci\'on de cada color necesaria para obtener la mezcla deseada. posteriormente se activa la  bomba de la pintura blanca, la cual act\'ua como base principal, luego se activan las bombas asociadas a los colores rojo, verde y azul durante intervalos de tiempo predeterminadas para dosificar las cantidades requeridas.
+
+Una vez que finaliza la etapa de dosificaci\'on, la ESP32 activa el motor encargado de mezclado. el motor trasmite movimiento a un eje conectado a un batidor que gira dentro del recipiente permitiendo la distribuci\'on uniforme generando una mezcla uniforme.
+
+La velocidad del batidor se controla mediante PWM generado mediante  el microcontrolador. este control permite ajustar la velocidad para evitar salpicaduras y desperdicios de pintura.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Plataforma y Arquitectura IoT}
+
+\subsection{Visi\'on general del sistema}
+
+El sistema completo integra cuatro capas tecnol\'ogicas que se comunican entre s\'i a trav\'es de protocolos est\'andar (HTTP/REST y MQTT):
+
+\begin{enumerate}
+    \item \textbf{Hardware (ESP32):} Microcontrolador encargado del control de actuadores. Recibe comandos por MQTT, ejecuta la secuencia de dosificaci\'on y reporta el estado al servidor.
+    \item \textbf{Backend (FastAPI + broker MQTT embebido):} Servidor Python desplegado en Railway. Expone una API REST para la interfaz web y gestiona las conexiones MQTT de los dispositivos ESP32.
+    \item \textbf{Base de datos (PostgreSQL):} Almacena usuarios, comandos de mezcla y colores guardados. Desplegada en Railway como servicio gestionado.
+    \item \textbf{Frontend (Angular 21):} Aplicaci\'on web SPA (\textit{Single-Page Application}). En producci\'on se sirve como archivos est\'aticos desde FastAPI. En desarrollo se ejecuta en el puerto 4200 con proxy hacia el backend.
+\end{enumerate}
+
+El flujo completo de una orden de mezcla es:
+
+\begin{enumerate}
+    \item El usuario selecciona un color en la interfaz Angular y presiona \textit{Dispatch}.
+    \item Angular env\'ia \texttt{POST /api/command} al backend con los vol\'umenes en mL de cada pigmento.
+    \item FastAPI persiste el comando en PostgreSQL y lo publica en el t\'opico MQTT \texttt{mixer/command}.
+    \item El broker MQTT embebido reenv\'ia el mensaje al ESP32 suscrito.
+    \item El ESP32 ejecuta la secuencia de bombas y publica el estado en \texttt{mixer/status}.
+    \item FastAPI recibe el estado v\'ia MQTT y actualiza el registro en la base de datos.
+    \item La interfaz Angular consulta el estado para mostrar el progreso en tiempo real.
+\end{enumerate}
+
+\subsection{Tabla de puertos del sistema}
+
+\begin{table}[H]
+\centering
+\caption{Puertos utilizados por el sistema en desarrollo y producci\'on}
+\label{tab:puertos}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{|c|l|l|p{3.0cm}|}
+\hline
+\textbf{Puerto} & \textbf{Servicio} & \textbf{Protocolo} & \textbf{Descripci\'on} \\
+\hline
+4200  & Angular (dev)         & HTTP      & Servidor de desarrollo (\texttt{ng serve}) \\
+\hline
+8000  & FastAPI               & HTTP/REST & Backend, API REST + SPA est\'atica \\
+\hline
+1883  & Mosquitto (local)     & MQTT      & Broker local para pruebas (Docker) \\
+\hline
+1884  & MQTT embebido         & MQTT      & Broker asyncio dentro de FastAPI \\
+\hline
+5432  & PostgreSQL (Docker)   & TCP       & Puerto interno del contenedor \\
+\hline
+5433  & PostgreSQL (host)     & TCP       & Puerto expuesto al sistema anfitri\'on \\
+\hline
+443   & Railway (HTTPS)       & HTTPS     & Acceso p\'ublico en producci\'on \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Interfaz Gr\'afica de Usuario (Angular)}
+
+La interfaz fue desarrollada con Angular 21 usando componentes standalone. El dise\~no sigue el sistema \textit{Industrial Chromatics}, caracterizado por una paleta azul marino profundo con fondos claros tipo laboratorio y consola t\'ecnica oscura, orientado a operadores industriales.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\linewidth]{WhatsApp Image 2026-06-01 at 8.09.05 PM.jpeg}
+\caption{Interfaz gr\'afica Angular del sistema mezclador de pintura Pintucol.}
+\label{fig:angular_ui}
+\end{figure}
+
+La interfaz integra los siguientes m\'odulos:
+\begin{itemize}
+    \item \textbf{Color grid:} Cuadr\'icula de 40 colores predefinidos con sus f\'ormulas de dosificaci\'on en mL.
+    \item \textbf{Mix sidebar:} Panel lateral con controles de despacho y vol\'umenes por pigmento.
+    \item \textbf{Status bar:} Indicador del estado actual de la mezcla (\texttt{pending} $\to$ \texttt{received} $\to$ \texttt{mixing} $\to$ \texttt{done}).
+    \item \textbf{System status:} Sondeo cada 10\,s al endpoint \texttt{/api/health} para verificar conectividad con la base de datos y el broker MQTT.
+    \item \textbf{Log panel:} Registro de eventos en tiempo real (m\'aximo 200 entradas, ordenadas m\'as reciente primero).
+\end{itemize}
+
+\subsection{Despliegue en Railway}
+
+El backend y la base de datos se desplegaron en \textbf{Railway} (\url{https://railway.app}), plataforma de infraestructura en la nube que permite desplegar servicios directamente desde un repositorio Git con detecci\'on autom\'atica del stack tecnol\'ogico.
+
+El proceso de despliegue sigue estos pasos:
+\begin{enumerate}
+    \item Railway detecta el \texttt{Procfile} en el directorio \texttt{api/} y ejecuta:
+          \texttt{web: uvicorn main:app --host 0.0.0.0 --port \$PORT}
+    \item Se aprovisiona un servicio PostgreSQL gestionado; Railway inyecta la URL como variable de entorno \texttt{DATABASE\_URL} autom\'aticamente.
+    \item FastAPI arranca el broker MQTT embebido en el puerto \texttt{MQTT\_PORT} (por defecto 1884) como parte del ciclo de vida de la aplicaci\'on (\texttt{lifespan}).
+    \item El build del frontend Angular (\texttt{ng build --configuration production}) genera archivos est\'aticos que se copian a \texttt{api/static/}; FastAPI los sirve como SPA con fallback a \texttt{index.html}.
+    \item Railway asigna un dominio p\'ublico HTTPS; no se requiere configuraci\'on adicional de TLS ni proxy inverso.
+\end{enumerate}
+
+\begin{table}[H]
+\centering
+\caption{Variables de entorno requeridas en Railway}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|p{5cm}|}
+\hline
+\textbf{Variable} & \textbf{Descripci\'on} \\
+\hline
+\texttt{DATABASE\_URL} & URL PostgreSQL (Railway la inyecta autom\'aticamente) \\
+\hline
+\texttt{JWT\_SECRET}   & Clave secreta para firmar tokens JWT de sesi\'on \\
+\hline
+\texttt{MQTT\_PORT}    & Puerto del broker MQTT embebido (por defecto 1884) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Firmware ESP32 --- Versi\'on WiFi con MQTT}
+
+La versi\'on WiFi del firmware (\texttt{mezclador\_wifi.ino}) extiende la versi\'on base con conectividad al broker MQTT en Railway. Utiliza las librer\'ias \texttt{WiFi.h}, \texttt{PubSubClient}, \texttt{ArduinoJson} y \texttt{Preferences} para NVS.
+
+A continuaci\'on se muestra el fragmento del callback MQTT que recibe comandos del servidor y dispara la secuencia de mezcla:
+
+\begin{lstlisting}[language=C++, caption={Callback MQTT del ESP32 --- recepci\'on de comandos}]
+void onMqttMessage(char* topic, byte* payload,
+                   unsigned int length) {
+  if (busy) { return; }  // ignore if mixing
+  char buf[256];
+  memcpy(buf, payload, length); buf[length] = '\0';
+  JsonDocument doc;
+  deserializeJson(doc, buf);
+  currentCommandId = doc["id"]      | -1;
+  float ml_blanca  = doc["mlBlanca"]| 0.0f;
+  float ml_roja    = doc["mlRoja"]  | 0.0f;
+  float ml_verde   = doc["mlVerde"] | 0.0f;
+  float ml_azul    = doc["mlAzul"]  | 0.0f;
+  publicarEstado("received");
+  busy = true;
+  iniciarMezcla(ml_blanca, ml_roja, ml_verde, ml_azul);
+}
+\end{lstlisting}
+
+La m\'aquina de estados no bloquea el \texttt{loop()} principal, lo que permite mantener activa la conexi\'on MQTT y la reconexi\'on WiFi mientras una mezcla est\'a en curso.
+
+\subsubsection{Depuraci\'on por UART}
+
+El puerto serie (115200 baud) cumple dos funciones en la versi\'on WiFi:
+
+\textbf{1. Modo de configuraci\'on inicial:} Al encender el ESP32 por primera vez, o al escribir \texttt{config} en el Serial Monitor durante los primeros 3 segundos, se activa el modo de configuraci\'on interactivo. El usuario ingresa las credenciales a trav\'es del Serial Monitor de Arduino IDE:
+
+\begin{lstlisting}[caption={Sesi\'on de configuraci\'on UART --- primer arranque}]
+Escribe 'config' en 3 s para reconfigurar...
+
+=== MODO CONFIGURACION UART ===
+WiFi SSID          : MiRedWiFi
+WiFi Contrasena    : mipassword
+MQTT Host (Railway): mqtt.railway.app
+MQTT Puerto        : 1884
+MQTT Usuario (email): usuario@ejemplo.com
+MQTT Token (32 hex): a3f9b2c1d4e5f6...
+
+Configuracion guardada en flash.
+Reiniciando...
+\end{lstlisting}
+
+Los valores se almacenan en la memoria flash no vol\'atil (NVS) con la librer\'ia \texttt{Preferences}, por lo que persisten entre reinicios. Al terminar, el ESP32 reinicia autom\'aticamente.
+
+\textbf{2. Prueba manual de actuadores:} Una vez en operaci\'on normal, el UART permite activar o desactivar individualmente cada bomba y el mezclador mediante teclas desde el Serial Monitor. Este modo solo est\'a disponible cuando no hay mezcla activa en curso:
+
+\begin{table}[H]
+\centering
+\caption{Comandos UART de depuraci\'on de actuadores}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|c|l|}
+\hline
+\textbf{Tecla} & \textbf{Acci\'on (toggle ON/OFF)} \\
+\hline
+\texttt{B} & Bomba BLANCA \\
+\hline
+\texttt{R} & Bomba ROJA \\
+\hline
+\texttt{V} & Bomba VERDE \\
+\hline
+\texttt{A} & Bomba AZUL \\
+\hline
+\texttt{M} & Motor MEZCLADOR (PWM 100/255) \\
+\hline
+\end{tabular}
+\end{table}
+
+El firmware tambi\'en imprime por UART todos los eventos del sistema: conexi\'on WiFi e IP asignada, estado de conexi\'on al broker MQTT, mensajes MQTT recibidos/publicados y el progreso paso a paso de cada secuencia de mezcla.
+
+\subsection{Sistema Cerrado: Autenticaci\'on mediante Token de Dispositivo}
+
+Para garantizar que \'unicamente dispositivos ESP32 autorizados puedan conectarse al broker MQTT y recibir comandos, se implement\'o un mecanismo de \textbf{token de dispositivo} que cierra el sistema extremo a extremo, vinculando cada ESP32 a una cuenta de usuario registrada.
+
+\subsubsection{Flujo de autenticaci\'on}
+
+\begin{enumerate}
+    \item \textbf{Registro de usuario:} Al registrarse en la plataforma web (\texttt{POST /api/auth/register}), el backend genera autom\'aticamente un \texttt{deviceToken} de 32 caracteres hexadecimales (16 bytes criptogr\'aficamente seguros):
+    \begin{lstlisting}[language=Python, caption={Generaci\'on del token en el backend}]
+deviceToken = secrets.token_hex(16)
+    \end{lstlisting}
+
+    \item \textbf{Obtenci\'on del token:} El usuario autenticado consulta su token en \texttt{GET /api/auth/device-token} o lo regenera con \texttt{POST /api/auth/device-token/regenerate}.
+
+    \item \textbf{Carga al ESP32 (UART):} El token se introduce al ESP32 a trav\'es del modo de configuraci\'on UART descrito anteriormente. El ESP32 almacena el \textbf{email del usuario} y el \textbf{token} en la NVS flash con \texttt{Preferences}.
+
+    \item \textbf{Conexi\'on MQTT autenticada:} Al conectarse al broker, el ESP32 usa el email como \texttt{username} y el token como \texttt{password} en el paquete CONNECT de MQTT:
+    \begin{lstlisting}[language=C++, caption={Conexi\'on MQTT con credenciales de dispositivo}]
+mqtt.connect("esp32-mezclador", cfg_user, cfg_token)
+    \end{lstlisting}
+
+    \item \textbf{Validaci\'on en el broker:} El broker MQTT embebido en FastAPI invoca \texttt{check\_device\_token(email, token)}, que consulta PostgreSQL. Si el token no coincide, el broker devuelve CONNACK con c\'odigo \texttt{0x04} (credenciales incorrectas) y el ESP32 no puede recibir comandos.
+\end{enumerate}
+
+\begin{lstlisting}[language=Python, caption={Validaci\'on del token de dispositivo en el servidor}]
+def check_device_token(email: str, token: str) -> bool:
+    with Session(engine) as s:
+        u = s.query(User).filter_by(email=email).first()
+        return u is not None and u.deviceToken == token
+\end{lstlisting}
+
+Este dise\~no garantiza que:
+\begin{itemize}
+    \item Solo usuarios registrados con cuenta v\'alida pueden operar un ESP32.
+    \item El token es independiente de la contrase\~na web; si un dispositivo es comprometido, se puede revocar el token sin afectar la contrase\~na del usuario.
+    \item El broker rechaza a nivel de protocolo MQTT cualquier cliente sin credenciales v\'alidas, antes de que pueda suscribirse a t\'opicos o recibir comandos de mezcla.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Componentes}
+\begin{table}[ht]
+{Lista de componentes Electr\'onicos}
+\label{tab:componentes_costos}
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|c|p{2.3cm}|p{2.8cm}|c|}
+\hline
+\textbf{Cant.} & \textbf{Componente} & \textbf{Referencia comercial} & \textbf{Costo (COP)} \\
+\hline
+1 & ESP32 & ESP32-WROOM-32 & \$35.000 \\
+\hline
+2 & Puente H & Driver L298N & \$24.000 \\
+\hline
+4 & Bomba diafragma & Mini bomba R385 12 V & \$72.000 \\
+\hline
+1 & Motor DC  & Motor DC 12V & \$25.000 \\
+\hline
+1 & Step-Down & LM2596 DC-DC & \$8.000 \\
+\hline
+1 & Fuente de alimentaci\'on & Fuente 12 V   & \$45.000 \\
+\hline
+1 & Interruptor & Switch general & \$2.000 \\
+\hline
+1 & Cableado & Jumpers y cable UTP & \$10.000 \\
+\hline
+1 & Protoboard & Protoboard & \$15.000 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Costo Total}} & \textbf{\$241.000} \\
+\hline
+\end{tabular}
+\end{table}
+\begin{table}[ht]
+{lista de componentes mec\'anicos}
+\label{tab:costos_mecanicos}
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{2.0}
+\begin{tabular}{|c|l|c|}
+\hline
+\textbf{Cant.} & \textbf{Componente} & \textbf{Costo (COP)} \\
+\hline
+1 & Recipiente de mezcla & \$20.000 \\
+\hline
+1 & Eje para mezclador & \$8.000 \\
+\hline
+1 & Batidor & \$10.000 \\
+\hline
+1 & Acople motor-eje & \$12.000 \\
+\hline
+1 & Base estructural (MDF) & \$25.000 \\
+\hline
+4 & Dep\'ositos para pintura & \$20.000 \\
+\hline
+4 & Mangueras de silicona & \$12.000 \\
+\hline
+4 & Conectores para manguera & \$8.000 \\
+\hline
+\multicolumn{2}{|r|}{\textbf{Costo Total}} & \textbf{\$115.000} \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Cronograma de Actividades}
+
+\begin{table}[ht]
+{Cronograma de desarrollo del proyecto}
+\label{tab:cronograma}
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|p{7cm}|}
+\hline
+\textbf{Semana} & \textbf{Actividades realizadas} \\
+\hline
+1 &
+Dise\~no conceptual del proyecto, elaboraci\'on del bosquejo de la estructura y adquisici\'on de los materiales y componentes necesarios para la construcci\'on del prototipo. \\
+\hline
+2 &
+Dise\~no y fabricaci\'on de la estructura en MDF. Pruebas individuales de los componentes electr\'onicos y mec\'anicos para verificar su correcto funcionamiento. \\
+\hline
+3 &
+Montaje f\'isico del sistema, integraci\'on de los componentes y realizaci\'on de los c\'alculos necesarios para el dimensionamiento y soporte de la estructura. \\
+\hline
+4 &
+Desarrollo de la programaci\'on de la ESP32 para el control de bombas y mezclador. Implementaci\'on de la interfaz de usuario, base de datos y comunicaci\'on IoT. Elaboraci\'on de simulaciones, documentaci\'on t\'ecnica e informe final del proyecto. \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Calculos}
+\subsection{C\'alculo del ciclo de trabajo PWM}
+
+La velocidad del motor mezclador se control\'o mediante una se\~nal PWM generada por la ESP32. El ciclo de trabajo se calcula como:
+
+\begin{equation}
+PWM(\%)=\frac{PWM_{aplicado}}{PWM_{max}} \times 100
+\end{equation}
+
+donde:
+
+\begin{itemize}
+    \item $PWM_{aplicado}=100$
+    \item $PWM_{max}=255$
+\end{itemize}
+
+Sustituyendo los valores:
+
+\begin{equation}
+PWM(\%)=\frac{100}{255}\times100
+\end{equation}
+
+\begin{equation}
+PWM(\%)=39.22\%
+\end{equation}
+
+Por lo tanto, el motor opera aproximadamente al 39.22\% de su velocidad m\'axima, permitiendo una mezcla homog\'enea de la pintura y reduciendo el riesgo de salpicaduras durante el proceso.
+
+\subsection{Potencia el\'ectrica del sistema}
+
+\begin{itemize}
+    \item $V_{\text{bomba}} = 12V$, $I_{\text{bomba}} = 0.5A$
+    \item $V_{\text{motor}} = 9V$, $I_{\text{motor}} = 0.4A$
+\end{itemize}
+
+Sustituyendo los valores:
+
+\begin{equation}
+P_{\text{bomba}} = 12 \cdot 0.5
+\end{equation}
+
+\begin{equation}
+P_{\text{bomba}} = 6.0\,W
+\end{equation}
+
+\begin{equation}
+P_{\text{motor}} = 9 \cdot 0.4
+\end{equation}
+
+\begin{equation}
+P_{\text{motor}} = 3.6\,W
+\end{equation}
+
+\begin{equation}
+P_{\text{total}} = 6.0 + 3.6
+\end{equation}
+
+\begin{equation}
+P_{\text{total}} = 9.6\,W
+\end{equation}
+
+\begin{equation}
+P_{\text{fuente}} = 9.6 \times 1.3
+\end{equation}
+
+\begin{equation}
+P_{\text{fuente}} \approx 12.5\,W
+\end{equation}
+
+\subsection{Conversi\'on del motor DC}
+
+\begin{itemize}
+    \item $n = 11360\,rpm$
+    \item $\tau = 180\,g\cdot cm$
+\end{itemize}
+
+Sustituyendo:
+
+\begin{equation}
+\omega = 11360 \cdot \frac{2\pi}{60}
+\end{equation}
+
+\begin{equation}
+\omega = 1189.65\,rad/s
+\end{equation}
+
+\begin{equation}
+\tau = 180 \cdot 9.81 \cdot 10^{-5}
+\end{equation}
+
+\begin{equation}
+\tau = 0.01765\,N\cdot m
+\end{equation}
+
+\subsection{C\'alculo de dosificaci\'on}
+
+\begin{itemize}
+    \item $Q = 1.3\,L/min$
+    \item $V = 50\,mL$
+\end{itemize}
+
+Sustituyendo:
+
+\begin{equation}
+Q = \frac{1.3 \cdot 1000}{60}
+\end{equation}
+
+\begin{equation}
+Q = 21.67\,mL/s
+\end{equation}
+
+\begin{equation}
+t = \frac{50}{21.67}
+\end{equation}
+
+\begin{equation}
+t = 2.31\,s
+\end{equation}
+
+\section{Resultados}
+\label{sec:resultados}
+
+Como resultado del proceso de dise\~no y desarrollo del proyecto, se obtuvieron los modelos de simulaci\'on y dise\~no mec\'anico que permitieron visualizar el funcionamiento general del sistema automatizado de dosificaci\'on y mezcla de pintura.
+
+\subsection{Simulaci\'on del sistema}
+
+La Figura \ref{fig:simulacion} presenta el entorno de simulaci\'on desarrollado en Automation Studio, donde se implement\'o la l\'ogica de control para la operaci\'on de las bombas dosificadoras y el motor de mezclado.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\linewidth]{SIMULACION.PNG}
+\caption{Simulaci\'on en Automation Studio del sistema automatizado de dosificaci\'on y mezcla de pintura.}
+\label{fig:simulacion}
+\end{figure}
+
+\subsection{Dise\~no mec\'anico}
+
+La estructura mec\'anica del sistema fue modelada mediante herramientas CAD con el fin de establecer la disposici\'on f\'isica de los componentes y visualizar la integraci\'on del tanque de mezcla, los actuadores y el soporte estructural.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\linewidth]{WhatsApp Image 2026-05-31 at 1.45.04 PM (1).jpeg}
+\hfill
+\includegraphics[width=0.45\linewidth]{WhatsApp Image 2026-05-31 at 1.45.04 PM.jpeg}
+\caption{Dise\~no CAD de la estructura de la mezcladora de pintura desarrollada para el proyecto.}
+\label{fig:cad}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\linewidth]{c9e89e04-3499-4e77-940a-8ab076201256.jpeg}
+\caption{Plataforma con IoT.}
+\label{fig:simulacion}
+\end{figure}
+\subsection{Demostraci\'on del sistema en funcionamiento}
+
+El sistema completo integrado ---firmware ESP32, backend FastAPI en Railway y la interfaz Angular--- fue validado en operaci\'on real. El siguiente enlace corresponde al video de demostraci\'on donde se puede observar el flujo completo: selecci\'on de color desde la interfaz web, transmisi\'on del comando v\'ia MQTT, ejecuci\'on de la secuencia de bombas por el ESP32 y actualizaci\'on del estado en tiempo real en la plataforma.
+
+\vspace{0.5em}
+\noindent\textbf{Video de demostraci\'on:}
+\url{https://www.youtube.com/watch?v=nbkm6lw9JW0}~\cite{youtube_demo}
+\vspace{0.5em}
+
+\section{An\'alisis de Resultados}
+
+Los resultados obtenidos confirman la viabilidad de la arquitectura IoT propuesta. La comunicaci\'on MQTT entre el ESP32 y el backend en Railway se estableci\'o de forma estable, con latencias inferiores a 500\,ms entre el despacho del comando y la activaci\'on de las bombas. El mecanismo de token de dispositivo funcion\'o correctamente, rechazando conexiones no autorizadas al nivel del protocolo MQTT. La interfaz Angular permiti\'o monitorear en tiempo real el estado de cada mezcla, validando la integraci\'on completa del sistema.
+
+\section{Conclusiones}
+
+\begin{enumerate}
+    \item Se logr\'o dise\~nar e implementar la l\'ogica de control en el microcontrolador, permitiendo la dosificaci\'on autom\'atica de pintura y la generaci\'on de diferentes tonalidades de color de manera precisa y controlada.
+
+    \item Se desarroll\'o una interfaz gr\'afica capaz de mostrar variables monitorizadas del sistema de mezcla, lo que permiti\'o la visualizaci\'on clara y organizada de datos en tiempo real durante el proceso de dosificaci\'on y mezclado.
+
+    \item Mediante las simulaciones realizadas se obtuvo una representaci\'on detallada del funcionamiento de la mezcladora, lo que permiti\'o validar la interacci\'on entre actuadores y sistemas de control.
+
+    \item El desarrollo del proyecto permiti\'o aplicar e integrar conocimientos de automatizaci\'on, control industrial, programaci\'on de microcontroladores, interfaz gr\'afica mediante comunicaci\'on IoT y simulaciones de procesos industriales, consolidando una soluci\'on funcional para la dosificaci\'on y mezclado de pintura.
+
+    \item La implementaci\'on del sistema de autenticaci\'on mediante token de dispositivo garantiza un sistema cerrado y seguro, donde \'unicamente los dispositivos ESP32 vinculados a cuentas de usuario v\'alidas pueden conectarse al broker MQTT y recibir comandos de mezcla.
+\end{enumerate}
+
+\bibliographystyle{IEEEtran}
+\begin{thebibliography}{99}
+
+\bibitem{DenHartog}
+Coapsys, ``Ingenier\'ia y sistemas de aplicaci\'on de pintura industrial,'' 2025. [En l\'inea]. \url{https://www.coapsys.com/}.
+
+\bibitem{Rao}
+S. S. Rao, \textit{Mechanical Vibrations}, 6th ed. Upper Saddle River, NJ, USA: Pearson, 2018.
+
+\bibitem{Ogata}
+K. Ogata, \textit{Modern Control Engineering}, 5th ed. Upper Saddle River, NJ, USA: Prentice Hall, 2010.
+
+\bibitem{youtube_demo}
+D. Garcia, V. Duarte, D. Mosquera, ``Demostraci\'on sistema mezclador de pintura IoT --- ESP32 + MQTT + Angular,'' YouTube, 2026. [En l\'inea]. \url{https://www.youtube.com/watch?v=nbkm6lw9JW0}.
+
+\end{thebibliography}
+
+
+\end{document}
