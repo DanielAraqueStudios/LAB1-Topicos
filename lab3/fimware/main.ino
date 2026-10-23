@@ -1,27 +1,30 @@
 /*
  * =========================================================
- *  CARRITO + ROTACION — ESP32 (firmware v3)
+ *  GRUA PLUMA (carro + rotación + péndulo) — ESP32 (firmware v4)
  *  Hardware:
- *    - VL53L0X (SDA=21, SCL=22)             -> posición lineal
- *    - Encoder cuadratura (ENC_A=32, ENC_B=33) -> ángulo de rotación
- *    - TB6612FNG canal B (BIN1=18, BIN2=19)  -> motor lineal
- *    - TB6612FNG canal A (AIN1=25, AIN2=26, PWMA=27) -> motor rotación
+ *    - VL53L0X (SDA=21, SCL=22)                -> posición lineal del carro
+ *    - Encoder cuadratura (ENC_A=32, ENC_B=33)  -> ángulo de rotación de la base
+ *    - Potenciómetro en el pivote (PEND_PIN=34) -> ángulo de péndulo (carga suspendida)
+ *    - TB6612FNG canal B (BIN1=18, BIN2=19)     -> motor 2 (traslación del carro)
+ *    - TB6612FNG canal A (AIN1=25, AIN2=26, PWMA=27) -> motor 1 (rotación de la base)
  *    - STBY=4 (compartido por ambos canales)
  * =========================================================
  *  Este firmware ya NO compensa fricción ni aplica zona muerta:
  *  ejecuta exactamente el PWM que manda MATLAB. Toda la
- *  inteligencia (zona muerta, rampas, controladores) está en MATLAB,
- *  para los dos ejes (lineal y rotación).
+ *  inteligencia (zona muerta, rampas, controladores en cascada) está
+ *  en MATLAB. El péndulo NO tiene actuador propio: solo se mide y se
+ *  reporta, para que MATLAB cierre el lazo interno de la cascada
+ *  (ángulo de péndulo) sobre el motor de rotación.
  *
  *  Protocolo (115200, terminador LF):
  *    MATLAB -> ESP32:  "D<refLin>,U<pwmLin>,R<refRot>,V<pwmRot>"
  *                      | "START" | "STOP" | "PING"
  *    ESP32 -> MATLAB:  "Tiempo_s,Referencia_rel_cm,Posicion_rel_cm,PWM_lin,"
- *                      "Referencia_rot_deg,Posicion_rot_deg,PWM_rot"
+ *                      "Referencia_rot_deg,Posicion_rot_deg,PWM_rot,Angulo_pendulo_deg"
  *                      cada 50 ms, más mensajes "OK:..." / "ERROR:..."
  *
  *  Protecciones (independientes por eje, salvo el watchdog que es global):
- *   1. Watchdog: sin paquetes por 300 ms -> freno en ambos ejes.
+ *   1. Watchdog: sin paquetes por 300 ms -> freno en ambos motores.
  *   2. Lineal — tope superior: bloquea PWM positivo cerca de FINAL_REAL_CM.
  *   3. Lineal — tope inferior: bloquea PWM negativo por debajo del cero.
  *   4. Lineal — sensor: si hay >10 lecturas inválidas seguidas -> freno lineal.
@@ -30,7 +33,8 @@
  *
  *  Si un motor se mueve al revés, cambia INVERTIR_MOTOR / INVERTIR_MOTOR_ROT
  *  a true (no hace falta cambiar cables). Si el encoder cuenta al revés,
- *  cambia INVERTIR_ENCODER a true.
+ *  cambia INVERTIR_ENCODER a true. Si el péndulo reporta ángulo al revés,
+ *  cambia INVERTIR_PENDULO a true.
  * =========================================================
  */
 
@@ -52,6 +56,9 @@ const int pinPWMA = 27;
 // ── Pines encoder cuadratura (rotación) ───────────────────
 const int pinEncA = 32;
 const int pinEncB = 33;
+
+// ── Pin potenciómetro de péndulo (ADC1, solo lectura) ─────
+const int pinPendulo = 34;
 
 #ifndef LED_BUILTIN
   #define LED_BUILTIN 2
@@ -84,6 +91,15 @@ const bool  ROT_LIMITES_ACTIVOS = true;
 const float ROT_LIM_INF_DEG = -170.0;
 const float ROT_LIM_SUP_DEG =  170.0;
 
+// ── Ajustes — péndulo (carga suspendida, solo medición) ────
+const bool INVERTIR_PENDULO = false;
+// TODO: calibrar con el potenciómetro real: leer analogRead() en reposo
+// (0°, péndulo colgando vertical) y en una desviación conocida para
+// ajustar PEND_ADC_CERO y PEND_GRADOS_POR_CUENTA.
+const int   PEND_ADC_CERO          = 2048; // lectura ADC (0-4095) en péndulo vertical
+const float PEND_GRADOS_POR_CUENTA = 0.0879; // ~ (180/4095)*2, placeholder
+const float PEND_FILTRO_ALPHA      = 0.4;    // EMA del ángulo de péndulo
+
 const unsigned long WD_TIMEOUT_MS         = 300;
 const unsigned long PERIODO_TELEMETRIA_MS = 50;
 
@@ -108,6 +124,10 @@ float anguloRotActual  = 0.0;   // grados, relativo al arranque
 float refEcoRot        = 0.0;   // solo se devuelve en la telemetría
 int   pwmCmdRot        = 0;     // último PWM de rotación pedido por MATLAB
 int   ultimoPWMRot     = 0;     // PWM de rotación realmente aplicado
+
+// ── Estado — péndulo (solo medición, sin actuador propio) ──
+float anguloPenduloActual   = 0.0;   // grados, filtrado
+bool  filtroPenduloInicializado = false;
 
 // ── Estado compartido ───────────────────────────────────────
 bool  sistemaActivo    = false;
@@ -169,6 +189,9 @@ void setup() {
   pinMode(pinEncB, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(pinEncA), isrEncA, CHANGE);
 
+  analogReadResolution(12);
+  pinMode(pinPendulo, INPUT);
+
   pinMode(LED_BUILTIN, OUTPUT);
   for (int i = 0; i < 3; i++) {
     digitalWrite(LED_BUILTIN, HIGH); delay(100);
@@ -185,7 +208,7 @@ void setup() {
   sensor.setMeasurementTimingBudget(20000);   // 20 ms por medida
   sensor.startContinuous();
 
-  Serial.println("Tiempo_s,Referencia_rel_cm,Posicion_rel_cm,PWM_lin,Referencia_rot_deg,Posicion_rot_deg,PWM_rot");
+  Serial.println("Tiempo_s,Referencia_rel_cm,Posicion_rel_cm,PWM_lin,Referencia_rot_deg,Posicion_rot_deg,PWM_rot,Angulo_pendulo_deg");
   tInicio = tUltimoEnvio = tUltimoPaquete = millis();
 }
 
@@ -194,6 +217,7 @@ void loop() {
   leerSerial();
   leerSensor();
   leerEncoder();
+  leerPendulo();
 
   unsigned long ahora = millis();
 
@@ -252,7 +276,8 @@ void loop() {
     Serial.print(ultimoPWM);           Serial.print(",");
     Serial.print(refEcoRot, 2);        Serial.print(",");
     Serial.print(anguloRotActual, 2);  Serial.print(",");
-    Serial.println(ultimoPWMRot);
+    Serial.print(ultimoPWMRot);        Serial.print(",");
+    Serial.println(anguloPenduloActual, 2);
   }
 
   // 5. LED
@@ -282,6 +307,20 @@ void leerEncoder() {
   long cuentas = encoderCount;
   interrupts();
   anguloRotActual = (360.0 * cuentas) / (float)ENC_COUNTS_POR_REV;
+}
+
+// Péndulo: solo medición (no tiene actuador propio). El ángulo se mide
+// relativo a PEND_ADC_CERO (péndulo colgando en reposo = 0°).
+void leerPendulo() {
+  int adc = analogRead(pinPendulo);
+  float grados = (adc - PEND_ADC_CERO) * PEND_GRADOS_POR_CUENTA;
+  if (INVERTIR_PENDULO) grados = -grados;
+  if (!filtroPenduloInicializado) {
+    anguloPenduloActual = grados;
+    filtroPenduloInicializado = true;
+  } else {
+    anguloPenduloActual = PEND_FILTRO_ALPHA * grados + (1.0 - PEND_FILTRO_ALPHA) * anguloPenduloActual;
+  }
 }
 
 // ─────────────────────────────────────────────────────────
