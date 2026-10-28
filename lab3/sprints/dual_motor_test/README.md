@@ -45,21 +45,26 @@ durante estas pruebas.
 
 ### Colores de cable de los motores JGA25-370 con encoder
 
-Confirmado por foto: ambos motores (lineal 300 RPM y rotación 170 RPM) son
-el mismo módulo/lote (conector JST de 6 pines, encoder Hall con tapa roja),
-mismos colores en los dos:
+Confirmado por foto y por cableado real: ambos motores (lineal 300 RPM y
+rotación 170 RPM) son el mismo módulo/lote (conector JST de 6 pines,
+encoder Hall con tapa roja), mismos colores en los dos. Orden físico del
+cable: rojo, negro, amarillo, verde, azul, blanco — **rojo y blanco son
+los dos de potencia del motor** (no rojo/negro como en un cable típico):
 
 | Color | Función | Va a (rotación) | Va a (lineal) |
 |---|---|---|---|
 | Rojo | Motor + | `AO1` | `BO1` |
-| Negro | Motor − | `AO2` | `BO2` |
-| Amarillo | Encoder VCC | 3.3V (confirmar si el encoder necesita 5V) | 3.3V |
+| Blanco | Motor − | `AO2` | `BO2` |
+| Amarillo | Encoder VCC | 3.3V | 3.3V |
 | Verde | Encoder GND | Tierra común | Tierra común |
 | Azul | Encoder canal A | GPIO32 | GPIO14 |
-| Blanco | Encoder canal B | GPIO33 | GPIO27 |
+| Negro | Encoder canal B | GPIO33 | GPIO27 |
 
-Si el conteo del encoder se ve errático una vez cableado, lo primero a
-revisar es si el amarillo (VCC del encoder) necesita 5V en vez de 3.3V.
+Nota: la asignación de colores para el motor de rotación (canal A, pines
+32/33) sigue el mismo patrón confirmado en el motor lineal, por ser el
+mismo módulo/lote — no se verificó cable por cable en ese motor
+específico, así que si algo no coincide al cablear, priorizar lo que mida
+el multímetro sobre esta tabla.
 
 El DRV8833 no tiene pin PWM dedicado: la velocidad se logra aplicando PWM
 directamente sobre el pin de dirección activo (en ambos canales). PWM:

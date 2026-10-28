@@ -37,17 +37,19 @@ fuente de `VM`.
 
 ### Colores de cable del motor (JGA25-370 con encoder)
 
-Confirmado por foto: mismo módulo/lote que el motor de rotación, conector
-JST de 6 pines, encoder Hall con tapa roja:
+Confirmado por foto y por cableado real: mismo módulo/lote que el motor de
+rotación, conector JST de 6 pines, encoder Hall con tapa roja. Orden físico
+del cable: rojo, negro, amarillo, verde, azul, blanco — **rojo y blanco son
+los dos de potencia del motor** (no rojo/negro como en un cable típico):
 
 | Color | Función | Va a |
 |---|---|---|
 | Rojo | Motor + | `BO1` |
-| Negro | Motor − | `BO2` |
-| Amarillo | Encoder VCC | 3.3V (confirmar si el encoder necesita 5V) |
+| Blanco | Motor − | `BO2` |
+| Amarillo | Encoder VCC | 3.3V |
 | Verde | Encoder GND | Tierra común |
 | Azul | Encoder canal A | GPIO14 |
-| Blanco | Encoder canal B | GPIO27 |
+| Negro | Encoder canal B | GPIO27 |
 
 Si el conteo del encoder se ve errático una vez cableado, lo primero a
 revisar es si el amarillo (VCC del encoder) necesita 5V en vez de 3.3V.
