@@ -8,6 +8,8 @@ const int pinBIN1 = 18;
 const int pinBIN2 = 19;
 const int pinSTBY = 4;
 
+const bool INVERTIR_MOTOR = true;
+
 const int pinAIN1 = 25;
 const int pinAIN2 = 26;
 
@@ -64,6 +66,7 @@ void IRAM_ATTR onTimerPlanta() {
 }
 
 void aplicarPWMLineal(float pct) {
+  if (INVERTIR_MOTOR) pct = -pct;
   if (pct > MAX_PCT) pct = MAX_PCT;
   if (pct < -MAX_PCT) pct = -MAX_PCT;
   digitalWrite(pinBIN1, pct >= 0 ? HIGH : LOW);

@@ -8,6 +8,8 @@ const int pinBIN1 = 18;
 const int pinBIN2 = 19;
 const int pinSTBY = 4;
 
+const bool INVERTIR_MOTOR = true;
+
 const int pinEncLinA = 14;
 const int pinEncLinB = 27;
 
@@ -46,6 +48,7 @@ void IRAM_ATTR isrEncLinA() {
 }
 
 void aplicarPWM(float pct) {
+  if (INVERTIR_MOTOR) pct = -pct;
   if (pct > MAX_PCT) pct = MAX_PCT;
   if (pct < -MAX_PCT) pct = -MAX_PCT;
   digitalWrite(pinBIN1, pct >= 0 ? HIGH : LOW);
