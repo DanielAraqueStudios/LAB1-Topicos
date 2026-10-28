@@ -3,7 +3,7 @@
 const int pinAIN1 = 25;
 const int pinAIN2 = 26;
 const int pinPWMA = 27;
-const int pinSTBY = 14;
+const int pinSTBY = 4;
 
 const int pinEncA = 32;
 const int pinEncB = 33;

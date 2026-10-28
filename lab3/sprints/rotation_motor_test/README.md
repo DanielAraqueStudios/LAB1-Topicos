@@ -10,40 +10,50 @@ igual que se hizo en `LAB 2/firmware/sprint1_characterization`.
 
 ## Hardware
 
-Segundo breakout TB6612FNG, confirmado por foto, independiente del que mueve
-el motor lineal del carro. Usa un solo canal, el A (`AIN1`/`AIN2`/`PWMA`/
-`AO1`/`AO2`), con `STBY` en HIGH para que el driver esté activo. La posición
-se mide con el encoder en cuadratura ya instalado en el eje de rotación
-(A/B), decodificado por interrupción.
+**Un solo breakout TB6612FNG**, el mismo que ya mueve el motor lineal del
+carro en `lab3/fimware/main.ino` (confirmado: el motor lineal ya se probó y
+giró con ese driver). El motor de rotación se conecta al canal A del
+*mismo* board (`AIN1`/`AIN2`/`PWMA`/`AO1`/`AO2`); el canal B sigue siendo el
+del motor lineal (`BIN1`/`BIN2`/`BO1`/`BO2`). `STBY` es **compartido** entre
+ambos canales — no hace falta (ni hay) un segundo pin de standby. La
+posición se mide con el encoder en cuadratura ya instalado en el eje de
+rotación (A/B), decodificado por interrupción.
+
+Motores: ambos son JGA25-370 de 12V — el de rotación a 170 RPM, el lineal a
+300 RPM (reducción de engranaje distinta en cada uno, mismo motor base).
 
 ### Pinout del driver (serigrafía de la board)
 
 | Pin driver | Conexión |
 |------------|----------|
-| `VM`       | Alimentación del motor (riel de potencia, según voltaje del motor de rotación) |
+| `VM`       | Alimentación de los motores a 12V (riel de potencia, compartido por ambos canales) |
 | `VCC`      | Alimentación lógica (3.3V desde el ESP32) |
 | `GND`      | Tierra común con el ESP32 y con VM |
-| `STBY`     | GPIO 14 (HIGH = driver activo) |
+| `STBY`     | GPIO 4 (HIGH = driver activo) — **compartido** con el canal B (motor lineal) |
 | `AIN1`     | GPIO 25 |
 | `AIN2`     | GPIO 26 |
 | `PWMA`     | GPIO 27 |
 | `AO1`/`AO2`| Terminales del motor de rotación (canal A) |
-| `BIN1`/`BIN2`/`PWMB`/`BO1`/`BO2` | Sin usar en este sketch (canal B libre) |
+| `BIN1`/`BIN2`/`PWMB`/`BO1`/`BO2` | Canal B — motor lineal, no tocado por este sketch |
 
 ### Pines del ESP32 usados por el sketch
+
+Idénticos a los que ya usa `lab3/fimware/main.ino` para este mismo driver,
+a propósito — así este sketch es un re-test aislado del canal A sin cambiar
+ningún wiring físico.
 
 | Señal | GPIO |
 |-------|------|
 | AIN1  | 25   |
 | AIN2  | 26   |
 | PWMA  | 27   |
-| STBY  | 14   |
+| STBY  | 4    |
 | ENC_A | 32   |
 | ENC_B | 33   |
 
-La lógica del TB6612FNG funciona con 2.7–5.5V en `VCC`, pero `VM` debe
-dimensionarse según la corriente/voltaje nominal del motor de rotación —
-no lo alimentes desde el riel de 3.3V del ESP32.
+La lógica del TB6612FNG funciona con 2.7–5.5V en `VCC`, pero `VM` (12V,
+compartido por ambos motores) no debe alimentarse desde el riel de 3.3V del
+ESP32.
 
 ## Uso — pruebas manuales
 

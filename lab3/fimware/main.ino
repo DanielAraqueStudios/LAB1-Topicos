@@ -43,18 +43,15 @@
 
 VL53L0X sensor;
 
-// ── Pines TB6612FNG #1 — lineal (canal B) ─────────────────
+// ── Pines TB6612FNG — un solo driver, ambos canales ───────
+// Canal B (lineal) y canal A (rotación) en la MISMA board, STBY compartido.
 const int pinBIN1 = 18;
 const int pinBIN2 = 19;
 const int pinSTBY = 4;
 
-// ── Pines TB6612FNG #2 — rotación (canal A, board separada) ─
-// Driver físicamente distinto al de arriba (confirmado por foto): su STBY
-// es independiente y debe habilitarse por separado.
 const int pinAIN1 = 25;
 const int pinAIN2 = 26;
 const int pinPWMA = 27;
-const int pinSTBYRot = 14;
 
 // ── Pines encoder cuadratura (rotación) ───────────────────
 const int pinEncA = 32;
@@ -182,8 +179,6 @@ void setup() {
 
   pinMode(pinSTBY, OUTPUT);
   digitalWrite(pinSTBY, HIGH);
-  pinMode(pinSTBYRot, OUTPUT);
-  digitalWrite(pinSTBYRot, HIGH);
   pinMode(pinAIN1, OUTPUT);
   pinMode(pinAIN2, OUTPUT);
   pwmInit();
