@@ -105,6 +105,7 @@ function ControlMotor_GUI()
         'modoManual',true,'u_prev_c',0,'u_prev_c_ext',0,'u_prev_c_int',0, ...
         'enBanda',false,'enBandaExt',false,'enBandaInt',false, ...
         'sinDatos',0,'sinDatosRot',0, ...
+        'encoderLin',0, ...
         'alarma','','tick',0);
 
     P      = struct('Udz',DEF_UDZ,'K',DEF_K,'wc',DEF_WC,'ucMax',U_MAX-DEF_UDZ);
@@ -229,9 +230,13 @@ function ControlMotor_GUI()
         'Units','normalized','Position',[0.52 0.215 0.44 0.07], ...
         'BackgroundColor',[0.28 0.28 0.40],'ForegroundColor','white','FontSize',9, ...
         'Callback',@exportarDatos);
+    lblEncoderLin = uicontrol(pControl,'Style','text','String','Encoder lineal: 0 cuentas', ...
+        'Units','normalized','Position',[0.04 0.155 0.92 0.035], ...
+        'BackgroundColor',BG,'ForegroundColor',[0.6 0.8 0.95],'FontSize',8, ...
+        'FontWeight','bold','HorizontalAlignment','center');
     lblInfo = uicontrol(pControl,'Style','text', ...
         'String','Presione INICIAR para calcular los controladores', ...
-        'Units','normalized','Position',[0.04 0.02 0.92 0.17], ...
+        'Units','normalized','Position',[0.04 0.02 0.92 0.12], ...
         'BackgroundColor',[0.13 0.13 0.18],'ForegroundColor',[0.45 0.65 0.45], ...
         'FontSize',8,'HorizontalAlignment','center');
 
@@ -502,7 +507,7 @@ function ControlMotor_GUI()
                 errordlg(['No se pudo abrir ' COM '. Cierre el Serial Monitor y revise el COM.'],'Error');
                 return;
             end
-            [y0, yr0, yp0, t0] = esperarMedicion(3.0);
+            [y0, yr0, yp0, t0, yEnc0] = esperarMedicion(3.0);
             if isnan(y0)
                 agregarLog('SYS', 'El ESP32 no envía datos');
                 errordlg('El ESP32 no envía datos. Revise sensor, baudios y firmware.','Error');
@@ -514,6 +519,7 @@ function ControlMotor_GUI()
             meas.y = y0;  meas.t = t0;
             measRot.y = yr0;
             measPen.y = yp0;
+            estado.encoderLin = yEnc0;
         else
             simu.y = 0; simu.v = 0; simu.up = 0; simu.yf = 0; simu.t = 0;
             simuRot.y = 0; simuRot.v = 0; simuRot.up = 0; simuRot.yf = 0;
@@ -834,7 +840,7 @@ function ControlMotor_GUI()
         else; estado.rotRefRamp = estado.rotRefRamp + sign(drR)*rrR; end
 
         % ── medición (lineal + base + péndulo comparten la misma línea serial) ─
-        [y, yr, yp, tt, nuevo] = leerSensor();
+        [y, yr, yp, tt, nuevo, yEnc] = leerSensor();
         if nuevo
             dtm = tt - meas.t;
             if dtm > 0.01 && dtm < 0.5
@@ -843,6 +849,7 @@ function ControlMotor_GUI()
                 measPen.vhat = 0.7*measPen.vhat + 0.3*(yp - measPen.y)/dtm;
             end
             meas.y = y;  meas.t = tt;  measRot.y = yr;  measPen.y = yp;
+            estado.encoderLin = yEnc;
             estado.sinDatos = 0;  estado.sinDatosRot = 0;
         else
             estado.sinDatos = estado.sinDatos + 1;
@@ -973,6 +980,7 @@ function ControlMotor_GUI()
 
         lblPend.String    = sprintf('%.1f °', measPen.y);
         lblPendRef.String = sprintf('%.1f °', pendRef);
+        lblEncoderLin.String = sprintf('Encoder lineal: %d cuentas', round(estado.encoderLin));
 
         estado.tick = estado.tick + 1;
         if mod(estado.tick,2) == 0; actualizarGraficas(); end
@@ -1187,7 +1195,7 @@ function ControlMotor_GUI()
     %% ══════════════════════════════════════════════════════════
     %  SENSOR / SIMULACIÓN
     %% ══════════════════════════════════════════════════════════
-    function [y, yr, yp, tt, nuevo] = leerSensor()
+    function [y, yr, yp, tt, nuevo, yEnc] = leerSensor()
         if estado.modoManual
             raw  = simu.y    + 0.15*randn();
             rawR = simuRot.y + 0.30*randn();
@@ -1197,21 +1205,23 @@ function ControlMotor_GUI()
             simuPen.yf = 0.5*rawP + 0.5*simuPen.yf;
             simu.t  = simu.t + SAMPLE_TIME;
             y = simu.yf;  yr = simuRot.yf;  yp = simuPen.yf;  tt = simu.t;  nuevo = true;
+            yEnc = round(simu.yf * 1000);   % placeholder: cuentas simuladas, derivadas de la posición
         else
-            [yy, yyR, yyP, t2, ok] = leerUltimaLinea();
+            [yy, yyR, yyP, t2, ok, yyE] = leerUltimaLinea();
             if ok
-                y = yy;  yr = yyR;  yp = yyP;  tt = t2;  nuevo = true;
+                y = yy;  yr = yyR;  yp = yyP;  tt = t2;  nuevo = true;  yEnc = yyE;
             else
-                y = meas.y;  yr = measRot.y;  yp = measPen.y;  tt = meas.t;  nuevo = false;
+                y = meas.y;  yr = measRot.y;  yp = measPen.y;  tt = meas.t;  nuevo = false;  yEnc = estado.encoderLin;
             end
         end
     end
 
     % Vacía el buffer y se queda con la última telemetría válida.
     % Formato: Tiempo_s,Referencia_rel_cm,Posicion_rel_cm,PWM_lin,
-    %          Referencia_rot_deg,Posicion_rot_deg,PWM_rot,Angulo_pendulo_deg
-    function [y, yr, yp, tt, ok] = leerUltimaLinea()
-        y = NaN;  yr = NaN;  yp = NaN;  tt = NaN;  ok = false;
+    %          Referencia_rot_deg,Posicion_rot_deg,PWM_rot,Angulo_pendulo_deg,
+    %          Encoder_lineal_cuentas
+    function [y, yr, yp, tt, ok, yEnc] = leerUltimaLinea()
+        y = NaN;  yr = NaN;  yp = NaN;  tt = NaN;  ok = false;  yEnc = NaN;
         try
             while estado.arduino.NumBytesAvailable > 0
                 linea = char(strtrim(readline(estado.arduino)));
@@ -1228,10 +1238,16 @@ function ControlMotor_GUI()
                     yv  = str2double(partes{3});
                     yrv = str2double(partes{6});
                     ypv = str2double(partes{8});
+                    if numel(partes) >= 9
+                        yev = str2double(partes{9});
+                    else
+                        yev = NaN;
+                    end
                     if ~isnan(tv) && ~isnan(yv)
                         y = yv;  tt = tv;  ok = true;
                         if ~isnan(yrv); yr = yrv; end
                         if ~isnan(ypv); yp = ypv; end
+                        if ~isnan(yev); yEnc = yev; end
                         if startsWith(estado.alarma,'ERROR:'); estado.alarma = ''; end
                     end
                 end
@@ -1240,19 +1256,20 @@ function ControlMotor_GUI()
         end
     end
 
-    function [y, yr, yp, tt] = esperarMedicion(tmax)
-        y = NaN;  yr = NaN;  yp = NaN;  tt = NaN;
+    function [y, yr, yp, tt, yEnc] = esperarMedicion(tmax)
+        y = NaN;  yr = NaN;  yp = NaN;  tt = NaN;  yEnc = NaN;
         t0 = tic;
         while toc(t0) < tmax && isnan(y)
-            [yy, yyR, yyP, t2, ok] = leerUltimaLinea();
+            [yy, yyR, yyP, t2, ok, yyE] = leerUltimaLinea();
             if ok
-                y = yy;  yr = yyR;  yp = yyP;  tt = t2;
+                y = yy;  yr = yyR;  yp = yyP;  tt = t2;  yEnc = yyE;
             else
                 pause(0.02);
             end
         end
         if isnan(yr); yr = 0; end
         if isnan(yp); yp = 0; end
+        if isnan(yEnc); yEnc = 0; end
     end
 
     % Planta simulada lineal: velocidad con zona muerta y lag, 1 muestra de retardo
