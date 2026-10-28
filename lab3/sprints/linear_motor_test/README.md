@@ -35,6 +35,23 @@ solo se reporta.
 `VCC` del driver va a 3.3V del ESP32; `GND` común entre ESP32, driver y
 fuente de `VM`.
 
+### Colores de cable del motor (JGA25-370 con encoder)
+
+Confirmado por foto: mismo módulo/lote que el motor de rotación, conector
+JST de 6 pines, encoder Hall con tapa roja:
+
+| Color | Función | Va a |
+|---|---|---|
+| Rojo | Motor + | `BO1` |
+| Negro | Motor − | `BO2` |
+| Amarillo | Encoder VCC | 3.3V (confirmar si el encoder necesita 5V) |
+| Verde | Encoder GND | Tierra común |
+| Azul | Encoder canal A | GPIO14 |
+| Blanco | Encoder canal B | GPIO27 |
+
+Si el conteo del encoder se ve errático una vez cableado, lo primero a
+revisar es si el amarillo (VCC del encoder) necesita 5V en vez de 3.3V.
+
 ## Uso — pruebas manuales
 
 Sube el sketch y abre el monitor serial a 115200 baud. Comandos

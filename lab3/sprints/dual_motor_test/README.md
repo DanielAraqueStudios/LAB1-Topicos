@@ -43,6 +43,24 @@ durante estas pruebas.
 | ENC_B (lineal) | 27 | Encoder cuadratura, sensor adicional |
 | SDA / SCL (VL53L0X) | 21 / 22 | I2C, distancia lineal |
 
+### Colores de cable de los motores JGA25-370 con encoder
+
+Confirmado por foto: ambos motores (lineal 300 RPM y rotación 170 RPM) son
+el mismo módulo/lote (conector JST de 6 pines, encoder Hall con tapa roja),
+mismos colores en los dos:
+
+| Color | Función | Va a (rotación) | Va a (lineal) |
+|---|---|---|---|
+| Rojo | Motor + | `AO1` | `BO1` |
+| Negro | Motor − | `AO2` | `BO2` |
+| Amarillo | Encoder VCC | 3.3V (confirmar si el encoder necesita 5V) | 3.3V |
+| Verde | Encoder GND | Tierra común | Tierra común |
+| Azul | Encoder canal A | GPIO32 | GPIO14 |
+| Blanco | Encoder canal B | GPIO33 | GPIO27 |
+
+Si el conteo del encoder se ve errático una vez cableado, lo primero a
+revisar es si el amarillo (VCC del encoder) necesita 5V en vez de 3.3V.
+
 El DRV8833 no tiene pin PWM dedicado: la velocidad se logra aplicando PWM
 directamente sobre el pin de dirección activo (en ambos canales). PWM:
 canal lineal a 1000 Hz (igual que `linear_motor_test`), canal rotación a

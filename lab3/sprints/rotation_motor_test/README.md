@@ -55,6 +55,23 @@ ningún wiring físico.
 | ENC_A | 32   |
 | ENC_B | 33   |
 
+### Colores de cable del motor (JGA25-370 con encoder)
+
+Confirmado por foto: módulo con conector JST de 6 pines, encoder Hall con
+tapa roja:
+
+| Color | Función | Va a |
+|---|---|---|
+| Rojo | Motor + | `AO1` |
+| Negro | Motor − | `AO2` |
+| Amarillo | Encoder VCC | 3.3V (confirmar si el encoder necesita 5V) |
+| Verde | Encoder GND | Tierra común |
+| Azul | Encoder canal A | GPIO32 |
+| Blanco | Encoder canal B | GPIO33 |
+
+Si el conteo del encoder se ve errático una vez cableado, lo primero a
+revisar es si el amarillo (VCC del encoder) necesita 5V en vez de 3.3V.
+
 ### Motor de rotación — las dos terminales
 
 El motor (JGA25-370) tiene dos cables de potencia, sin polaridad fija:
