@@ -5,9 +5,9 @@
  *    - VL53L0X (SDA=21, SCL=22)                -> posición lineal del carro
  *    - Encoder cuadratura (ENC_A=32, ENC_B=33)  -> ángulo de rotación de la base
  *    - Potenciómetro en el pivote (PEND_PIN=34) -> ángulo de péndulo (carga suspendida)
- *    - TB6612FNG canal B (BIN1=18, BIN2=19)     -> motor 2 (traslación del carro)
- *    - TB6612FNG canal A (AIN1=25, AIN2=26, PWMA=27) -> motor 1 (rotación de la base)
- *    - STBY=4 (compartido por ambos canales)
+ *    - TB6612FNG (BIN1=18, BIN2=19, STBY=4)      -> motor 2 (traslación del carro)
+ *    - DRV8833 (AIN1=25, AIN2=26, STBY=14)       -> motor 1 (rotación de la base)
+ *      (dos drivers físicamente separados, cada uno con su propio STBY/VM)
  * =========================================================
  *  Este firmware ya NO compensa fricción ni aplica zona muerta:
  *  ejecuta exactamente el PWM que manda MATLAB. Toda la
@@ -43,15 +43,17 @@
 
 VL53L0X sensor;
 
-// ── Pines TB6612FNG — un solo driver, ambos canales ───────
-// Canal B (lineal) y canal A (rotación) en la MISMA board, STBY compartido.
+// ── Pines driver lineal — TB6612FNG (confirmado) ──────────
 const int pinBIN1 = 18;
 const int pinBIN2 = 19;
 const int pinSTBY = 4;
 
+// ── Pines driver rotación — DRV8833 (board separada, confirmado por foto) ─
+// El DRV8833 no tiene pin PWM dedicado: la velocidad se logra aplicando PWM
+// directamente sobre AIN1 o AIN2 (el que esté "activo"), con el otro en LOW.
 const int pinAIN1 = 25;
 const int pinAIN2 = 26;
-const int pinPWMA = 27;
+const int pinSTBYRot = 14;
 
 // ── Pines encoder cuadratura (rotación) ───────────────────
 const int pinEncA = 32;
@@ -139,22 +141,25 @@ unsigned long tUltimoPaquete = 0;
 String bufferSerial = "";
 
 // ── PWM compatible con núcleo ESP32 2.x y 3.x ─────────────
-// Canales 0/1 = motor lineal (BIN1/BIN2); canal 2 = motor rotación (PWMA)
+// Canales 0/1 = motor lineal (BIN1/BIN2); canales 2/3 = motor rotación
+// (AIN1/AIN2 — el DRV8833 aplica PWM sobre el pin de dirección activo)
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && (ESP_ARDUINO_VERSION_MAJOR >= 3)
   void pwmInit() {
     ledcAttach(pinBIN1, PWM_FREQ, PWM_RES);
     ledcAttach(pinBIN2, PWM_FREQ, PWM_RES);
-    ledcAttach(pinPWMA, PWM_FREQ, PWM_RES);
+    ledcAttach(pinAIN1, PWM_FREQ, PWM_RES);
+    ledcAttach(pinAIN2, PWM_FREQ, PWM_RES);
   }
   void pwmWrite(int canal, int duty) {
-    int pin = (canal == 0) ? pinBIN1 : (canal == 1) ? pinBIN2 : pinPWMA;
+    int pin = (canal == 0) ? pinBIN1 : (canal == 1) ? pinBIN2 : (canal == 2) ? pinAIN1 : pinAIN2;
     ledcWrite(pin, duty);
   }
 #else
   void pwmInit() {
     ledcSetup(0, PWM_FREQ, PWM_RES); ledcAttachPin(pinBIN1, 0);
     ledcSetup(1, PWM_FREQ, PWM_RES); ledcAttachPin(pinBIN2, 1);
-    ledcSetup(2, PWM_FREQ, PWM_RES); ledcAttachPin(pinPWMA, 2);
+    ledcSetup(2, PWM_FREQ, PWM_RES); ledcAttachPin(pinAIN1, 2);
+    ledcSetup(3, PWM_FREQ, PWM_RES); ledcAttachPin(pinAIN2, 3);
   }
   void pwmWrite(int canal, int duty) {
     ledcWrite(canal, duty);
@@ -179,8 +184,8 @@ void setup() {
 
   pinMode(pinSTBY, OUTPUT);
   digitalWrite(pinSTBY, HIGH);
-  pinMode(pinAIN1, OUTPUT);
-  pinMode(pinAIN2, OUTPUT);
+  pinMode(pinSTBYRot, OUTPUT);
+  digitalWrite(pinSTBYRot, HIGH);
   pwmInit();
   detenerMotor();
   detenerMotorRot();
@@ -428,18 +433,16 @@ void detenerMotor() {
   ultimoPWM = 0;
 }
 
-// ── Rotación — canal A (AIN1/AIN2/PWMA) ───────────────────
+// ── Rotación — DRV8833 (AIN1/AIN2, PWM sobre el pin activo) ─
 void aplicarPWMRot(int pwm) {
   pwm = constrain(pwm, -PWM_MAX, PWM_MAX);
   if (INVERTIR_MOTOR_ROT) pwm = -pwm;
   if (pwm > 0) {
-    digitalWrite(pinAIN1, HIGH);
-    digitalWrite(pinAIN2, LOW);
+    pwmWrite(3, 0);
     pwmWrite(2, pwm);
   } else if (pwm < 0) {
-    digitalWrite(pinAIN1, LOW);
-    digitalWrite(pinAIN2, HIGH);
-    pwmWrite(2, -pwm);
+    pwmWrite(2, 0);
+    pwmWrite(3, -pwm);
   } else {
     frenarRot();
   }
@@ -447,13 +450,11 @@ void aplicarPWMRot(int pwm) {
 
 void frenarRot() {
   if (FRENO_EN_CERO_ROT) {
-    digitalWrite(pinAIN1, HIGH);
-    digitalWrite(pinAIN2, HIGH);
     pwmWrite(2, PWM_MAX);
+    pwmWrite(3, PWM_MAX);
   } else {
-    digitalWrite(pinAIN1, LOW);
-    digitalWrite(pinAIN2, LOW);
     pwmWrite(2, 0);
+    pwmWrite(3, 0);
   }
 }
 
