@@ -6,11 +6,10 @@ VL53L0X sensor;
 
 const int pinBIN1 = 18;
 const int pinBIN2 = 19;
-const int pinSTBYLin = 4;
+const int pinSTBY = 4;
 
 const int pinAIN1 = 25;
 const int pinAIN2 = 26;
-const int pinSTBYRot = 14;
 
 const int pinEncA = 32;
 const int pinEncB = 33;
@@ -233,11 +232,8 @@ void setup() {
 
   pinMode(pinBIN1, OUTPUT);
   pinMode(pinBIN2, OUTPUT);
-  pinMode(pinSTBYLin, OUTPUT);
-  digitalWrite(pinSTBYLin, HIGH);
-
-  pinMode(pinSTBYRot, OUTPUT);
-  digitalWrite(pinSTBYRot, HIGH);
+  pinMode(pinSTBY, OUTPUT);
+  digitalWrite(pinSTBY, HIGH);
 
   pinMode(pinEncA, INPUT_PULLUP);
   pinMode(pinEncB, INPUT_PULLUP);

@@ -10,19 +10,19 @@ igual que se hizo en `LAB 2/firmware/sprint1_characterization`.
 
 ## Hardware
 
-**Board separada** del driver que mueve el motor lineal. El motor lineal
-usa un TB6612FNG (confirmado, ya probado y funcionando); el motor de
-rotación usa un **DRV8833** (confirmado por foto de la board real — sin
-pines `PWMA`/`PWMB` dedicados, solo `AIN1`/`AIN2`/`BIN1`/`BIN2`/`STBY`,
-`AO1`/`AO2`/`BO1`/`BO2`, `VM`, `GND`, y varios `NC`).
+Mismo driver **DRV8833** que ya mueve el motor lineal del carro en
+`lab3/fimware/main.ino` — **un solo board, dos canales**, confirmado por
+foto de la board real (sin pines `PWMA`/`PWMB` dedicados, solo
+`AIN1`/`AIN2`/`BIN1`/`BIN2`/`STBY`, `AO1`/`AO2`/`BO1`/`BO2`, `VM`, `GND`,
+y varios `NC`). El motor de rotación va en el canal A (`AIN1`/`AIN2`); el
+canal B (`BIN1`/`BIN2`) es el del motor lineal, no tocado por este sketch.
+`STBY` es **compartido** entre ambos canales.
 
-A diferencia del TB6612FNG, el DRV8833 no tiene un pin PWM dedicado: la
-velocidad se logra aplicando PWM directamente sobre el pin de dirección
-activo (`AIN1` para un sentido, `AIN2` para el otro), manteniendo el otro
-en 0. Este sketch usa el canal A del DRV8833 (`AIN1`/`AIN2`) para el motor
-de rotación; el canal B (`BIN1`/`BIN2`) queda libre. La posición se mide
-con el encoder en cuadratura ya instalado en el eje de rotación (A/B),
-decodificado por interrupción.
+El DRV8833 no tiene un pin PWM dedicado: la velocidad se logra aplicando
+PWM directamente sobre el pin de dirección activo (`AIN1` para un sentido,
+`AIN2` para el otro), manteniendo el otro en 0. La posición se mide con el
+encoder en cuadratura ya instalado en el eje de rotación (A/B), decodificado
+por interrupción.
 
 Motor: JGA25-370, 12V, 170 RPM.
 
@@ -30,24 +30,28 @@ Motor: JGA25-370, 12V, 170 RPM.
 
 | Pin driver | Conexión |
 |------------|----------|
-| `VM`       | Alimentación del motor a 12V |
+| `VM`       | Alimentación de los motores a 12V (compartida por ambos canales) |
 | `GND`      | Tierra común con el ESP32 |
-| `STBY`     | GPIO 14 (HIGH = driver activo) |
+| `STBY`     | GPIO 4 (HIGH = driver activo) — **compartido** con el canal B (motor lineal) |
 | `AIN1`     | GPIO 25 |
 | `AIN2`     | GPIO 26 |
 | `AO1`/`AO2`| Terminales del motor de rotación (canal A) |
-| `BIN1`/`BIN2`/`BO1`/`BO2`/`NC` | Sin usar en este sketch (canal B libre) |
+| `BIN1`/`BIN2`/`BO1`/`BO2`/`NC` | Canal B — motor lineal, no tocado por este sketch |
 
 El DRV8833 no necesita un pin `VCC` lógico separado: deriva la lógica
-internamente de `VM`, a diferencia del TB6612FNG.
+internamente de `VM`.
 
 ### Pines del ESP32 usados por el sketch
+
+Idénticos a los que ya usa `lab3/fimware/main.ino` para este driver, a
+propósito — así este sketch es un re-test aislado del canal A sin cambiar
+ningún wiring físico.
 
 | Señal | GPIO |
 |-------|------|
 | AIN1  | 25   |
 | AIN2  | 26   |
-| STBY  | 14   |
+| STBY  | 4    |
 | ENC_A | 32   |
 | ENC_B | 33   |
 

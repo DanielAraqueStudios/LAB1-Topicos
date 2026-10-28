@@ -5,9 +5,9 @@
  *    - VL53L0X (SDA=21, SCL=22)                -> posición lineal del carro
  *    - Encoder cuadratura (ENC_A=32, ENC_B=33)  -> ángulo de rotación de la base
  *    - Potenciómetro en el pivote (PEND_PIN=34) -> ángulo de péndulo (carga suspendida)
- *    - TB6612FNG (BIN1=18, BIN2=19, STBY=4)      -> motor 2 (traslación del carro)
- *    - DRV8833 (AIN1=25, AIN2=26, STBY=14)       -> motor 1 (rotación de la base)
- *      (dos drivers físicamente separados, cada uno con su propio STBY/VM)
+ *    - DRV8833, un solo driver, dos canales (STBY=4, compartido):
+ *        canal B (BIN1=18, BIN2=19) -> motor 2 (traslación del carro)
+ *        canal A (AIN1=25, AIN2=26) -> motor 1 (rotación de la base)
  * =========================================================
  *  Este firmware ya NO compensa fricción ni aplica zona muerta:
  *  ejecuta exactamente el PWM que manda MATLAB. Toda la
@@ -43,17 +43,16 @@
 
 VL53L0X sensor;
 
-// ── Pines driver lineal — TB6612FNG (confirmado) ──────────
+// ── Pines driver DRV8833 — un solo board, ambos canales ───
+// El DRV8833 no tiene pin PWM dedicado: la velocidad se logra aplicando PWM
+// directamente sobre el pin de dirección activo (A_IN o B_IN), con el otro
+// en LOW. STBY es compartido por los dos canales.
 const int pinBIN1 = 18;
 const int pinBIN2 = 19;
 const int pinSTBY = 4;
 
-// ── Pines driver rotación — DRV8833 (board separada, confirmado por foto) ─
-// El DRV8833 no tiene pin PWM dedicado: la velocidad se logra aplicando PWM
-// directamente sobre AIN1 o AIN2 (el que esté "activo"), con el otro en LOW.
 const int pinAIN1 = 25;
 const int pinAIN2 = 26;
-const int pinSTBYRot = 14;
 
 // ── Pines encoder cuadratura (rotación) ───────────────────
 const int pinEncA = 32;
@@ -184,8 +183,6 @@ void setup() {
 
   pinMode(pinSTBY, OUTPUT);
   digitalWrite(pinSTBY, HIGH);
-  pinMode(pinSTBYRot, OUTPUT);
-  digitalWrite(pinSTBYRot, HIGH);
   pwmInit();
   detenerMotor();
   detenerMotorRot();
