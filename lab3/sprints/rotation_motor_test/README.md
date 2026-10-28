@@ -55,6 +55,62 @@ ningún wiring físico.
 | ENC_A | 32   |
 | ENC_B | 33   |
 
+### Motor de rotación — las dos terminales
+
+El motor (JGA25-370) tiene dos cables de potencia, sin polaridad fija:
+cualquiera va a `AO1` y el otro a `AO2`. Si gira al revés de lo esperado,
+se intercambian los dos cables en `AO1`/`AO2` (o se invierte
+`INVERTIR_MOTOR_ROT` en `main.ino`, sin re-cablear).
+
+### Las 6 terminales del JGA25-370 con encoder
+
+Este motor trae el encoder incorporado: el cable del motor tiene 6 hilos
+en total, no solo los 2 de potencia. Todos están contemplados en el
+wiring de este sketch:
+
+| Hilo | Función | Va a |
+|---|---|---|
+| Motor + | Potencia del motor | `AO1` |
+| Motor − | Potencia del motor | `AO2` |
+| Encoder VCC | Alimentación del encoder | 3.3V (confirmar contra el datasheet del motor) |
+| Encoder GND | Tierra del encoder | Tierra común |
+| Encoder canal A | Señal de cuadratura | GPIO32 |
+| Encoder canal B | Señal de cuadratura | GPIO33 |
+
+El encoder del JGA25-370 es de 2 canales (A/B), sin pulso de índice/Z — no
+hay un séptimo hilo esperado. Si el cable de tu motor trae más de 6 hilos,
+avisa el conteo/colores para revisar que no quede ninguno sin usar.
+
+### No confundir el encoder con las salidas del driver
+
+El encoder (`ENC_A`=GPIO32, `ENC_B`=GPIO33) es un dispositivo **separado**
+del driver DRV8833, montado en el eje del motor. **Nunca** debe compartir
+cable con `AO1`/`AO2` (esas salidas llevan los 12V de potencia del motor
+directo a los dos cables del motor) — conectar el encoder ahí pondría 12V
+en un GPIO del ESP32 y probablemente lo dañaría. El encoder lleva su propia
+alimentación (VCC del encoder a 3.3V, GND común) y sus dos salidas de señal
+van únicamente a GPIO32/GPIO33.
+
+### Pinout completo de referencia (todo el sistema, no solo este sketch)
+
+| Dispositivo | Pin | GPIO / conexión |
+|---|---|---|
+| DRV8833 | STBY | GPIO4 (compartido) |
+| DRV8833 | AIN1 | GPIO25 |
+| DRV8833 | AIN2 | GPIO26 |
+| DRV8833 | BIN1 | GPIO18 |
+| DRV8833 | BIN2 | GPIO19 |
+| DRV8833 | AO1/AO2 | Terminales del motor de rotación |
+| DRV8833 | BO1/BO2 | Terminales del motor lineal |
+| DRV8833 | VM | 12V+ |
+| DRV8833 | GND | Tierra común |
+| Encoder rotación | Canal A | GPIO32 |
+| Encoder rotación | Canal B | GPIO33 |
+| Encoder rotación | VCC/GND | 3.3V / tierra común |
+| VL53L0X (lineal) | SDA | GPIO21 |
+| VL53L0X (lineal) | SCL | GPIO22 |
+| Potenciómetro péndulo | Wiper | GPIO34 (sin construir aún) |
+
 ## Uso — pruebas manuales
 
 Sube el sketch y abre el monitor serial a 115200 baud. Comandos

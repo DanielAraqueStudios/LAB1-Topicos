@@ -75,6 +75,22 @@ comportamiento de cada motor no cambie al correr junto al otro.
 - `E` — imprime conteo actual del encoder de rotación
 - `?` — imprime esta ayuda
 
+### Caracterización de la planta completa
+- `T` — corre un escalón **simultáneo** en ambos ejes (mismo `U_PCT`,
+  mismo perfil reposo→escalón→reposo que los sprints individuales) y
+  vuelca un único CSV con ambas salidas:
+  ```
+  k,t_us,u_pct_lin,dist_mm,u_pct_rot,enc_count
+  0,0,30.0,120,30.0,0
+  1,10000,30.0,118,30.0,4
+  ...
+  # DONE
+  ```
+  Útil para identificar la planta completa (acoplamientos entre ejes
+  incluidos) en lugar de cada eje por separado.
+- `X` — aborta la prueba en curso
+- `I` — imprime los parámetros de la prueba (Ts, amplitud, duraciones)
+
 ## Uso / verificación
 
 1. Cargar el sketch, abrir monitor serie a 115200 baudios, terminador LF.
