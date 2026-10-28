@@ -52,6 +52,7 @@ class MainWindow(QMainWindow):
         w.disconnected.connect(self._on_disconnected)
         w.connect_failed.connect(self._on_connect_failed)
         w.tick.connect(self._on_tick)
+        w.enc_lin.connect(self._on_enc_lin)
         w.alarm.connect(self._on_alarm)
         w.log_batch.connect(self._on_log_batch)
 
@@ -100,9 +101,11 @@ class MainWindow(QMainWindow):
         self.lin_slider = QSlider(Qt.Orientation.Horizontal)
         self.lin_slider.setRange(0, int(C.MAX_DIST_CM * 10))
         self.lin_slider.valueChanged.connect(self._on_lin_slider)
+        self.enc_lin_lbl = QLabel("Encoder lineal: -- cuentas")
         ll.addWidget(QLabel("Referencia de posición (cm):"))
         ll.addWidget(self.lin_slider)
         ll.addWidget(self.lin_value_lbl)
+        ll.addWidget(self.enc_lin_lbl)
         layout.addWidget(lin_box)
 
         rot_box = QGroupBox("Eje de Rotación (cascada)")
@@ -215,6 +218,9 @@ class MainWindow(QMainWindow):
 
     def _on_alarm(self, text: str) -> None:
         self.status_lbl.setText(f"Estado: CORRIENDO  |  {text}")
+
+    def _on_enc_lin(self, count: int) -> None:
+        self.enc_lin_lbl.setText(f"Encoder lineal: {count} cuentas")
 
     def _on_log_batch(self, items: list) -> None:
         self.log_console.append_batch(items)

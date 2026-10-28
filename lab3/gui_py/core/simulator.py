@@ -6,6 +6,7 @@ import random
 from . import constants as C
 
 SUBSTEP_DT = 0.005
+SIM_COUNTS_PER_CM = 100
 
 
 class SimulatedPlant:
@@ -68,4 +69,5 @@ class SimulatedPlant:
         self.yf = 0.5 * raw + 0.5 * self.yf
         self.yf_rot = 0.5 * raw_r + 0.5 * self.yf_rot
         self.yf_pend = 0.5 * raw_p + 0.5 * self.yf_pend
-        return self.yf, self.yf_rot, self.yf_pend, self.t
+        enc_lin_count = round(self.y * SIM_COUNTS_PER_CM)
+        return self.yf, self.yf_rot, self.yf_pend, self.t, enc_lin_count

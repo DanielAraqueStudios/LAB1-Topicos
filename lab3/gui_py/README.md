@@ -35,7 +35,7 @@ velocidad medida son pequeños) y rate-limiting de la referencia, tal como en
 | `core/controllers.py` | Las ecuaciones de diferencias que corren en tiempo real (PID con anti-windup condicional y derivativo sobre velocidad medida; filtro recursivo del compensador en adelanto; recursión multirate dead-beat; estado+integrador+observador) |
 | `core/cascade.py` | Orquestación por muestra: rampas de referencia, error, controlador, rate-limit del comando, banda muerta, compensación de zona muerta — puerto directo de `loopControl()` |
 | `core/simulator.py` | Planta simulada (zona muerta + retardo de primer orden para lineal y base; péndulo acoplado al mismo PWM de rotación, sin zona muerta propia) — mismas simplificaciones que `avanzarPlantaSim`/`avanzarPlantaSimRot` en `main.m` |
-| `core/protocol.py` | Formato de comando `D<ref>,U<pwm>,R<ref>,V<pwm>` y parseo de las 8 columnas de telemetría |
+| `core/protocol.py` | Formato de comando `D<ref>,U<pwm>,R<ref>,V<pwm>` y parseo de las 9 columnas de telemetría (la 9ª, `Encoder_lineal_cuentas`, es opcional — líneas de 8 columnas de firmwares antiguos siguen parseando, con `enc_lin_count=None`) |
 | `core/serial_worker.py` | `QObject` que vive en su propio `QThread`; corre el tick de la cascada cada `SAMPLE_TIME` (50 ms), ya sea contra el puerto serial real o contra la planta simulada; emite `log_batch` (lista de tuplas `(direccion, texto)`, misma convención que `LAB 2/gui/core/serial_worker.py`) |
 | `ui/` | Ventana principal, tema oscuro, paneles de gráficas (pyqtgraph), panel de log serial (`ui/widgets/log_console.py`) |
 
@@ -75,11 +75,18 @@ velocidad medida son pequeños) y rate-limiting de la referencia, tal como en
 
 ```
 GUI -> ESP32:   "D<refLinCm>,U<pwmLin>,R<refRotDeg>,V<pwmRot>"  | "START" | "STOP" | "PING"
-ESP32 -> GUI:   "Tiempo_s,Referencia_rel_cm,Posicion_rel_cm,PWM_lin,Referencia_rot_deg,Posicion_rot_deg,PWM_rot,Angulo_pendulo_deg"
+ESP32 -> GUI:   "Tiempo_s,Referencia_rel_cm,Posicion_rel_cm,PWM_lin,Referencia_rot_deg,Posicion_rot_deg,PWM_rot,Angulo_pendulo_deg,Encoder_lineal_cuentas"
 ```
 
-8 columnas, 115200 baudios, terminador LF, cada 50 ms. Líneas que empiezan
+9 columnas, 115200 baudios, terminador LF, cada 50 ms. Líneas que empiezan
 con `OK:`, `ERROR:`, `PONG`, o que contienen el encabezado, no son telemetría.
+La 9ª columna (`Encoder_lineal_cuentas`) es el conteo crudo de cuadratura de
+un encoder adicional en el motor lineal (GPIO14/27, por ISR); es solo
+informativo — no alimenta ningún lazo de control, la posición lineal sigue
+viniendo del VL53L0X (`Posicion_rel_cm`). Se muestra en la GUI junto al
+estado del eje lineal. En modo `simulated` (`core/simulator.py`), este campo
+es un valor derivado (`round(posición_simulada_cm * 100)`), no una medición
+real — placeholder para no romper el formato de 9 columnas.
 
 ## Cómo correrla
 

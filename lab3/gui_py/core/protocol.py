@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-HEADER = "Tiempo_s,Referencia_rel_cm,Posicion_rel_cm,PWM_lin,Referencia_rot_deg,Posicion_rot_deg,PWM_rot,Angulo_pendulo_deg"
+HEADER = "Tiempo_s,Referencia_rel_cm,Posicion_rel_cm,PWM_lin,Referencia_rot_deg,Posicion_rot_deg,PWM_rot,Angulo_pendulo_deg,Encoder_lineal_cuentas"
 N_FIELDS = 8
+N_FIELDS_WITH_ENCODER = 9
 
 
 @dataclass
@@ -16,6 +17,7 @@ class Telemetry:
     pos_rot_deg: float
     pwm_rot: int
     pos_pend_deg: float
+    enc_lin_count: int | None = None
 
 
 def format_command(ref_lin_cm: float, pwm_lin: int, ref_rot_deg: float, pwm_rot: int) -> str:
@@ -33,6 +35,12 @@ def parse_telemetry(line: str) -> Telemetry | None:
         values = [float(p) for p in parts[:N_FIELDS]]
     except ValueError:
         return None
+    enc_lin_count = None
+    if len(parts) >= N_FIELDS_WITH_ENCODER:
+        try:
+            enc_lin_count = int(float(parts[8]))
+        except ValueError:
+            enc_lin_count = None
     return Telemetry(
         t_s=values[0],
         ref_lin_cm=values[1],
@@ -42,6 +50,7 @@ def parse_telemetry(line: str) -> Telemetry | None:
         pos_rot_deg=values[5],
         pwm_rot=int(values[6]),
         pos_pend_deg=values[7],
+        enc_lin_count=enc_lin_count,
     )
 
 

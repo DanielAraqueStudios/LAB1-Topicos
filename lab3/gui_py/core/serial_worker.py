@@ -21,6 +21,7 @@ class CascadeWorker(QObject):
     connect_failed = pyqtSignal(str)
     running_changed = pyqtSignal(bool)
     tick = pyqtSignal(float, float, float, float, float, float, float, float, float, float, float, float)
+    enc_lin = pyqtSignal(int)
     alarm = pyqtSignal(str)
     log_batch = pyqtSignal(list)
 
@@ -143,12 +144,13 @@ class CascadeWorker(QObject):
         if self._is_sim:
             out = self._cascade.tick()
             cmd = format_command(self._cascade.dist_ref_ramp, out.u_lin, self._cascade.rot_ref_ramp, out.pwm_rot)
-            y, yr, yp, t = self._sim_plant.step(out.u_lin, out.pwm_rot, C.SAMPLE_TIME)
+            y, yr, yp, t, enc_lin = self._sim_plant.step(out.u_lin, out.pwm_rot, C.SAMPLE_TIME)
             self._cascade.update_measurement(y, yr, yp, C.SAMPLE_TIME)
             telemetry = f"{t:.3f},{self._cascade.dist_ref_ramp:.2f},{y:.2f},{round(out.u_lin)}," \
-                        f"{self._cascade.rot_ref_ramp:.2f},{yr:.2f},{round(out.pwm_rot)},{yp:.2f}"
+                        f"{self._cascade.rot_ref_ramp:.2f},{yr:.2f},{round(out.pwm_rot)},{yp:.2f},{enc_lin}"
             self.log_batch.emit([("tx", cmd), ("rx", telemetry)])
             self._emit_tick(t, out, y, yr, yp)
+            self.enc_lin.emit(enc_lin)
             return
 
         tel = self._read_latest_telemetry()
@@ -172,6 +174,8 @@ class CascadeWorker(QObject):
         yp = tel.pos_pend_deg if tel else self._cascade.inner.meas_y
         t = tel.t_s if tel else now
         self._emit_tick(t, out, y, yr, yp)
+        if tel is not None and tel.enc_lin_count is not None:
+            self.enc_lin.emit(tel.enc_lin_count)
 
     def _emit_tick(self, t: float, out: CascadeOutput, y: float, yr: float, yp: float) -> None:
         self.tick.emit(
