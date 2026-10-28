@@ -1,5 +1,10 @@
 # Prueba aislada — motor lineal con driver L298N
 
+**Controla únicamente el motor B (lineal)** — no toca el motor A
+(rotación) en absoluto, ni sus pines ni su lógica. El eje de rotación
+sigue usando el driver original (DRV8833) y no se ve afectado por este
+sketch.
+
 Variante de `lab3/sprints/linear_motor_test` (que usa el DRV8833) pero con
 un **L298N** en su lugar, para comparar desempeño. Contexto: el DRV8833
 está especificado para 2.7–10.8V y se está alimentando a 12V — se
