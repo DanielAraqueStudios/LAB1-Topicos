@@ -9,10 +9,15 @@ transferencia — igual que `lab3/sprints/rotation_motor_test`.
 
 ## Hardware
 
-Usa el primer TB6612FNG (el que ya está wireado al carro), canal B
+Usa el driver DRV8833 (el mismo que ya está wireado al carro), canal B
 (`BIN1`/`BIN2`), con PWM aplicado directamente sobre `BIN1`/`BIN2` (no hay
-pin `PWMB` dedicado en este wiring — coincide con cómo lo usa
-`main.ino`). Distancia medida con el sensor VL53L0X por I2C.
+pin PWM dedicado en este driver — coincide con cómo lo usa `main.ino`).
+Distancia medida con el sensor VL53L0X por I2C.
+
+El motor lineal (JGA25-370, 12V, 300 RPM) también trae encoder de fábrica,
+igual que el de rotación — cableado aquí como sensor adicional. El VL53L0X
+sigue siendo la fuente de posición que se usaría para control; el encoder
+solo se reporta.
 
 ### Pines (ESP32) — iguales a los de `main.ino`
 
@@ -21,6 +26,8 @@ pin `PWMB` dedicado en este wiring — coincide con cómo lo usa
 | BIN1  | 18   |
 | BIN2  | 19   |
 | STBY  | 4    |
+| ENC_A (lineal) | 14 |
+| ENC_B (lineal) | 27 |
 | SDA (VL53L0X) | 21 |
 | SCL (VL53L0X) | 22 |
 
@@ -39,7 +46,7 @@ Sube el sketch y abre el monitor serial a 115200 baud. Comandos
 | `R<pwm>` | retrocede, pwm 0–255 (ej. `R150`) |
 | `S` | stop / coast |
 | `B` | brake |
-| `D` | imprime la distancia actual del VL53L0X (mm) |
+| `D` | imprime la distancia actual del VL53L0X (mm) y el conteo del encoder lineal |
 | `?` | reimprime la ayuda |
 
 Verifica primero con esto: `F100` mueve el carro un sentido, `R100` el
@@ -61,9 +68,9 @@ por timer de interrupción (sin `Serial` dentro del muestreo), y al final
 imprime:
 
 ```
-k,t_us,u_pct,dist_mm
-0,0,30.0,120
-1,10000,30.0,118
+k,t_us,u_pct,dist_mm,enc_lin_count
+0,0,30.0,120,0
+1,10000,30.0,118,3
 ...
 # DONE
 ```

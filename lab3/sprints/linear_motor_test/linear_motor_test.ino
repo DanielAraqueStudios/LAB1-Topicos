@@ -8,6 +8,9 @@ const int pinBIN1 = 18;
 const int pinBIN2 = 19;
 const int pinSTBY = 4;
 
+const int pinEncLinA = 14;
+const int pinEncLinB = 27;
+
 const int PWM_FREQ_HZ  = 1000;
 const int PWM_RES_BITS = 8;
 
@@ -22,15 +25,24 @@ const uint16_t N_MAX   = 2500;
 static uint32_t bt[N_MAX];
 static int16_t  bu[N_MAX];
 static int16_t  bdist[N_MAX];
+static int32_t  bencLin[N_MAX];
 
 volatile bool tick = false;
 volatile uint32_t tickTime = 0;
+volatile long encoderLinCount = 0;
 
 hw_timer_t *tmr;
 
 void IRAM_ATTR onTimer() {
   tickTime = micros();
   tick = true;
+}
+
+void IRAM_ATTR isrEncLinA() {
+  bool a = digitalRead(pinEncLinA);
+  bool b = digitalRead(pinEncLinB);
+  if (a == b) encoderLinCount++;
+  else encoderLinCount--;
 }
 
 void aplicarPWM(float pct) {
@@ -61,10 +73,10 @@ void imprimirAyuda() {
   Serial.println(F("  R<pwm>  -> retrocede, pwm 0-255 (ej: R150)"));
   Serial.println(F("  S       -> stop (coast)"));
   Serial.println(F("  B       -> brake"));
-  Serial.println(F("  D       -> imprime distancia actual (mm)"));
+  Serial.println(F("  D       -> imprime distancia (mm) y conteo del encoder lineal"));
   Serial.println(F("  ?       -> esta ayuda"));
   Serial.println(F("Caracterizacion (para funcion de transferencia):"));
-  Serial.println(F("  T       -> corre prueba de escalon y vuelca CSV k,t_us,u_pct,dist_mm"));
+  Serial.println(F("  T       -> corre prueba de escalon y vuelca CSV k,t_us,u_pct,dist_mm,enc_lin_count"));
   Serial.println(F("  X       -> aborta la prueba en curso"));
   Serial.println(F("  I       -> imprime parametros de la prueba"));
 }
@@ -104,6 +116,7 @@ void correrEscalon() {
 
   while (Serial.available()) Serial.read();
   aplicarStop();
+  encoderLinCount = 0;
 
   tick = false;
   uint32_t t0 = micros();
@@ -121,17 +134,18 @@ void correrEscalon() {
     uint32_t tms = (uint32_t)(k * TS_US / 1000);
     float u = (tms >= PRE_MS && tms < PRE_MS + STEP_MS) ? U_PCT : 0.0f;
 
-    bt[k]    = tickTime - t0;
-    bdist[k] = (int16_t)leerDistanciaMm();
-    bu[k]    = (int16_t)(u * 10);
+    bt[k]      = tickTime - t0;
+    bdist[k]   = (int16_t)leerDistanciaMm();
+    bencLin[k] = encoderLinCount;
+    bu[k]      = (int16_t)(u * 10);
 
     aplicarPWM(u);
   }
   aplicarStop();
 
-  Serial.println(F("k,t_us,u_pct,dist_mm"));
+  Serial.println(F("k,t_us,u_pct,dist_mm,enc_lin_count"));
   for (uint16_t k = 0; k < n; k++) {
-    Serial.printf("%u,%lu,%.1f,%d\n", k, (unsigned long)bt[k], bu[k] / 10.0f, bdist[k]);
+    Serial.printf("%u,%lu,%.1f,%d,%ld\n", k, (unsigned long)bt[k], bu[k] / 10.0f, bdist[k], (long)bencLin[k]);
   }
   Serial.println(F("# DONE"));
 }
@@ -163,7 +177,9 @@ void procesarLinea(String linea) {
     case 'D':
     case 'd':
       Serial.print(F("dist_mm="));
-      Serial.println(leerDistanciaMm());
+      Serial.print(leerDistanciaMm());
+      Serial.print(F(" enc_lin_count="));
+      Serial.println(encoderLinCount);
       break;
     case 'T':
     case 't':
@@ -193,6 +209,10 @@ void setup() {
   pinMode(pinBIN2, OUTPUT);
   pinMode(pinSTBY, OUTPUT);
   digitalWrite(pinSTBY, HIGH);
+
+  pinMode(pinEncLinA, INPUT_PULLUP);
+  pinMode(pinEncLinB, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(pinEncLinA), isrEncLinA, CHANGE);
 
 #if defined(ESP_ARDUINO_VERSION) && ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
   ledcAttach(pinBIN1, PWM_FREQ_HZ, PWM_RES_BITS);
