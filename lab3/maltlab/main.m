@@ -47,6 +47,7 @@ function ControlMotor_GUI()
     DEF_UDZ      = 110;      % valores por defecto de los campos
     DEF_K        = 0.034;
     DEF_WC       = 2.0;
+    LOG_LINES_MAX = 400;
     SIM_K = 0.040;  SIM_UDZ = 125;  SIM_TAU = 0.12;   % planta simulada
 
     %% ── PARÁMETROS FIJOS — ROTACIÓN (CASCADA) ───────────────
@@ -137,6 +138,8 @@ function ControlMotor_GUI()
                   'L',zeros(2,1),'x',[0;0],'xi',0,'ximax',1);
     rlzInt  = struct('Cn',1,'Cd',1,'be',zeros(1,0),'bu',zeros(1,0));
 
+    logBuf = {};
+
     %% ══════════════════════════════════════════════════════════
     %  INTERFAZ
     %% ══════════════════════════════════════════════════════════
@@ -195,7 +198,16 @@ function ControlMotor_GUI()
     edtUdz = filaEdit(pControl, 'PWM mínimo (U_DZ)',       num2str(DEF_UDZ), 0.595);
     edtK   = filaEdit(pControl, 'K planta (cm/s por PWM)', num2str(DEF_K),   0.550);
     edtWc  = filaEdit(pControl, 'Ancho de banda (rad/s)',  num2str(DEF_WC),  0.505);
-    edtCOM = filaEdit(pControl, 'Puerto COM',              COM_PORT,         0.460);
+    uicontrol(pControl,'Style','text','String','Puerto COM', ...
+        'Units','normalized','Position',[0.04 0.460 0.56 0.035], ...
+        'BackgroundColor',BG,'ForegroundColor',FG,'FontSize',8,'HorizontalAlignment','left');
+    popupCOM = uicontrol(pControl,'Style','popupmenu','String',{COM_PORT}, ...
+        'Units','normalized','Position',[0.62 0.460 0.26 0.035], ...
+        'BackgroundColor',[0.22 0.22 0.30],'ForegroundColor','white','FontSize',8);
+    uicontrol(pControl,'Style','pushbutton','String','Refrescar', ...
+        'Units','normalized','Position',[0.885 0.460 0.075 0.035], ...
+        'BackgroundColor',[0.22 0.35 0.50],'ForegroundColor','white','FontSize',6, ...
+        'Callback',@refrescarPuertosCOM);
 
     uicontrol(pControl,'Style','pushbutton','String','▶  INICIAR', ...
         'Units','normalized','Position',[0.04 0.375 0.44 0.07], ...
@@ -292,7 +304,7 @@ function ControlMotor_GUI()
     pGraficas = uipanel(fig,'Title','Monitoreo en Tiempo Real', ...
         'BackgroundColor',[0.94 0.94 0.94],'ForegroundColor',[0.10 0.10 0.10], ...
         'FontSize',11,'FontWeight','bold','Units','normalized', ...
-        'Position',[0.49 0.01 0.50 0.98]);
+        'Position',[0.49 0.20 0.50 0.79]);
 
     ax1 = subplot(4,3,1,'Parent',pGraficas);
     configurarEjes(ax1,'Posición lineal vs Tiempo','Tiempo (s)','Posición (cm)');
@@ -347,10 +359,21 @@ function ControlMotor_GUI()
     configurarEjes(ax4p,'Error ángulo PÉNDULO','Tiempo (s)','Error (°)');
     hErrLinePend = line(ax4p,NaN,NaN,'Color',[0.72 0.27 0],'LineWidth',1.5);
 
+    pLog = uipanel(fig,'Title','Registro de Actividad (serial)', ...
+        'BackgroundColor',BG,'ForegroundColor',[0.85 0.85 1.0], ...
+        'FontSize',10,'FontWeight','bold','Units','normalized', ...
+        'Position',[0.49 0.025 0.50 0.17]);
+    lstLog = uicontrol(pLog,'Style','listbox','String',{}, ...
+        'Units','normalized','Position',[0.02 0.06 0.96 0.88], ...
+        'BackgroundColor',[0.10 0.10 0.13],'ForegroundColor',[0.75 0.90 0.75], ...
+        'FontSize',8,'FontName','Consolas');
+
     lblStatus = uicontrol(fig,'Style','text','String','Estado: DETENIDO', ...
         'Units','normalized','Position',[0.01 0.00 0.98 0.02], ...
         'BackgroundColor',[0.85 0.85 0.85],'ForegroundColor',[0.1 0.1 0.1], ...
         'FontSize',8,'HorizontalAlignment','left');
+
+    refrescarPuertosCOM([],[]);
 
     %% ══════════════════════════════════════════════════════════
     %  CALLBACKS
@@ -362,6 +385,40 @@ function ControlMotor_GUI()
         h = uicontrol(parent,'Style','edit','String',valor, ...
             'Units','normalized','Position',[0.62 y 0.34 0.035], ...
             'BackgroundColor',[0.22 0.22 0.30],'ForegroundColor','white','FontSize',9);
+    end
+
+    function agregarLog(tag, msg)
+        linea = sprintf('[%s][%s] %s', datestr(now,'HH:MM:SS'), tag, msg);
+        logBuf{end+1} = linea;
+        if numel(logBuf) > LOG_LINES_MAX
+            logBuf = logBuf(end-LOG_LINES_MAX+1:end);
+        end
+        lstLog.String = logBuf;
+        lstLog.Value = numel(logBuf);
+        lstLog.ListboxTop = numel(logBuf);
+    end
+
+    function refrescarPuertosCOM(~,~)
+        anterior = '';
+        if ~isempty(popupCOM.String) && popupCOM.Value <= numel(popupCOM.String)
+            anterior = popupCOM.String{popupCOM.Value};
+        end
+        try
+            puertos = serialportlist("available");
+        catch
+            puertos = {};
+        end
+        puertos = cellstr(puertos);
+        if isempty(puertos)
+            popupCOM.String = {'(ninguno detectado)'};
+            popupCOM.Value  = 1;
+        else
+            popupCOM.String = puertos;
+            idxPrev = find(strcmp(puertos, anterior), 1);
+            if isempty(idxPrev); idxPrev = 1; end
+            popupCOM.Value = idxPrev;
+        end
+        agregarLog('SYS', sprintf('Puertos detectados: %s', strjoin(string(popupCOM.String), ', ')));
     end
 
     function cambiarModo(src,~)
@@ -428,25 +485,32 @@ function ControlMotor_GUI()
         estado.alarma = '';
 
         if ~estado.modoManual
-            COM = strtrim(edtCOM.String);
+            if isempty(popupCOM.String) || strcmp(popupCOM.String{popupCOM.Value},'(ninguno detectado)')
+                errordlg('No hay puertos COM detectados. Conecte el ESP32 y presione el botón de actualizar.','Error');
+                return;
+            end
+            COM = strtrim(popupCOM.String{popupCOM.Value});
             try
                 estado.arduino = serialport(COM, BAUD_RATE);
                 configureTerminator(estado.arduino,"LF");
                 pause(2);                       % el ESP32 se reinicia al abrir el puerto
                 flush(estado.arduino);
+                agregarLog('SYS', sprintf('Conectado a %s', COM));
             catch
                 estado.arduino = [];
+                agregarLog('SYS', sprintf('Error al abrir %s', COM));
                 errordlg(['No se pudo abrir ' COM '. Cierre el Serial Monitor y revise el COM.'],'Error');
                 return;
             end
             [y0, yr0, yp0, t0] = esperarMedicion(3.0);
             if isnan(y0)
+                agregarLog('SYS', 'El ESP32 no envía datos');
                 errordlg('El ESP32 no envía datos. Revise sensor, baudios y firmware.','Error');
                 try; delete(estado.arduino); catch; end
                 estado.arduino = [];
                 return;
             end
-            try; writeline(estado.arduino,'START'); catch; end
+            try; writeline(estado.arduino,'START'); agregarLog('TX','START'); catch; end
             meas.y = y0;  meas.t = t0;
             measRot.y = yr0;
             measPen.y = yp0;
@@ -479,7 +543,7 @@ function ControlMotor_GUI()
         estado.tick = 0;
 
         resetearEstadosControladores();
-        estado.corriendo = true;
+        estado.corriendo = true; 
         actualizarStatus();
 
         estado.timerObj = timer('ExecutionMode','fixedRate','Period',SAMPLE_TIME, ...
@@ -496,12 +560,13 @@ function ControlMotor_GUI()
         estado.timerObj = [];
         if ~isempty(estado.arduino)
             try
-                writeline(estado.arduino,'D0.0,U0,R0.0,V0'); pause(0.1);
-                writeline(estado.arduino,'STOP');             pause(0.05);
+                writeline(estado.arduino,'D0.0,U0,R0.0,V0'); agregarLog('TX','D0.0,U0,R0.0,V0'); pause(0.1);
+                writeline(estado.arduino,'STOP');             agregarLog('TX','STOP');            pause(0.05);
                 delete(estado.arduino);
             catch
             end
             estado.arduino = [];
+            agregarLog('SYS', 'Desconectado');
         end
         actualizarStatus();
     end
@@ -876,10 +941,13 @@ function ControlMotor_GUI()
             avanzarPlantaSimRot(uR);
         elseif ~isempty(estado.arduino)
             try
-                writeline(estado.arduino, sprintf('D%.1f,U%d,R%.1f,V%d', ...
-                    estado.distRefRamp, round(u), estado.rotRefRamp, round(uR)));
+                comando = sprintf('D%.1f,U%d,R%.1f,V%d', ...
+                    estado.distRefRamp, round(u), estado.rotRefRamp, round(uR));
+                writeline(estado.arduino, comando);
+                agregarLog('TX', comando);
             catch ex
                 disp(['[Serial] ' ex.message]);
+                agregarLog('SYS', sprintf('Error serial: %s', ex.message));
             end
         end
 
@@ -1149,10 +1217,10 @@ function ControlMotor_GUI()
                 linea = char(strtrim(readline(estado.arduino)));
                 if isempty(linea); continue; end
                 if startsWith(linea,'ERROR:')
-                    estado.alarma = linea;  continue;
+                    estado.alarma = linea;  agregarLog('SYS', linea);  continue;
                 end
                 if startsWith(linea,'OK:') || startsWith(linea,'PONG') || contains(linea,'Tiempo')
-                    continue;
+                    agregarLog('RX', linea);  continue;
                 end
                 partes = strsplit(linea, ',');
                 if numel(partes) >= 8
