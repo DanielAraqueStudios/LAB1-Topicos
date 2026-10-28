@@ -23,7 +23,7 @@ const int PWM_FREQ_LIN_HZ = 1000;
 const int PWM_FREQ_ROT_HZ = 2000;
 const int PWM_RES_BITS    = 8;
 
-const float MAX_PCT = 60.0f;
+const float MAX_PCT = 100.0f;
 
 const uint32_t TS_US   = 10000;
 const float    U_PCT   = 30.0f;
