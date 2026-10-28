@@ -18,7 +18,7 @@ const int PWM_RES_BITS = 8;
 
 const uint32_t TS_US   = 10000;
 const float    U_PCT   = 30.0f;
-const float    MAX_PCT = 60.0f;
+const float    MAX_PCT = 100.0f;
 const uint32_t PRE_MS  = 1000;
 const uint32_t STEP_MS = 4000;
 const uint32_t POST_MS = 4000;
