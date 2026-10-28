@@ -2,8 +2,9 @@
  * =========================================================
  *  GRUA PLUMA (carro + rotación + péndulo) — ESP32 (firmware v4)
  *  Hardware:
- *    - VL53L0X (SDA=21, SCL=22)                -> posición lineal del carro
+ *    - VL53L0X (SDA=21, SCL=22)                -> posición lineal del carro (fuente usada por el control)
  *    - Encoder cuadratura (ENC_A=32, ENC_B=33)  -> ángulo de rotación de la base
+ *    - Encoder cuadratura lineal (ENC_A=14, ENC_B=27) -> sensor adicional, solo se reporta
  *    - Potenciómetro en el pivote (PEND_PIN=34) -> ángulo de péndulo (carga suspendida)
  *    - DRV8833, un solo driver, dos canales (STBY=4, compartido):
  *        canal B (BIN1=18, BIN2=19) -> motor 2 (traslación del carro)
@@ -20,7 +21,8 @@
  *    MATLAB -> ESP32:  "D<refLin>,U<pwmLin>,R<refRot>,V<pwmRot>"
  *                      | "START" | "STOP" | "PING"
  *    ESP32 -> MATLAB:  "Tiempo_s,Referencia_rel_cm,Posicion_rel_cm,PWM_lin,"
- *                      "Referencia_rot_deg,Posicion_rot_deg,PWM_rot,Angulo_pendulo_deg"
+ *                      "Referencia_rot_deg,Posicion_rot_deg,PWM_rot,Angulo_pendulo_deg,"
+ *                      "Encoder_lineal_cuentas"
  *                      cada 50 ms, más mensajes "OK:..." / "ERROR:..."
  *
  *  Protecciones (independientes por eje, salvo el watchdog que es global):
@@ -57,6 +59,12 @@ const int pinAIN2 = 26;
 // ── Pines encoder cuadratura (rotación) ───────────────────
 const int pinEncA = 32;
 const int pinEncB = 33;
+
+// ── Pines encoder cuadratura (lineal, sensor adicional) ───
+// El motor lineal también trae encoder de fábrica; VL53L0X sigue siendo
+// la fuente de posición usada por el control, esto es un dato extra.
+const int pinEncLinA = 14;
+const int pinEncLinB = 27;
 
 // ── Pin potenciómetro de péndulo (ADC1, solo lectura) ─────
 const int pinPendulo = 34;
@@ -118,6 +126,8 @@ float refEco           = 0.0;   // solo se devuelve en la telemetría
 int   pwmCmd           = 0;     // último PWM pedido por MATLAB
 int   ultimoPWM        = 0;     // PWM realmente aplicado
 
+volatile long encoderLinCount = 0;   // cuentas crudas, sensor adicional
+
 // ── Estado — rotación ──────────────────────────────────────
 volatile long encoderCount = 0;
 float anguloRotActual  = 0.0;   // grados, relativo al arranque
@@ -175,6 +185,13 @@ void IRAM_ATTR isrEncA() {
   else encoderCount--;
 }
 
+void IRAM_ATTR isrEncLinA() {
+  bool a = digitalRead(pinEncLinA);
+  bool b = digitalRead(pinEncLinB);
+  if (a == b) encoderLinCount++;
+  else encoderLinCount--;
+}
+
 // ─────────────────────────────────────────────────────────
 void setup() {
   Serial.begin(115200);
@@ -190,6 +207,10 @@ void setup() {
   pinMode(pinEncA, INPUT_PULLUP);
   pinMode(pinEncB, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(pinEncA), isrEncA, CHANGE);
+
+  pinMode(pinEncLinA, INPUT_PULLUP);
+  pinMode(pinEncLinB, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(pinEncLinA), isrEncLinA, CHANGE);
 
   analogReadResolution(12);
   pinMode(pinPendulo, INPUT);
@@ -210,7 +231,7 @@ void setup() {
   sensor.setMeasurementTimingBudget(20000);   // 20 ms por medida
   sensor.startContinuous();
 
-  Serial.println("Tiempo_s,Referencia_rel_cm,Posicion_rel_cm,PWM_lin,Referencia_rot_deg,Posicion_rot_deg,PWM_rot,Angulo_pendulo_deg");
+  Serial.println("Tiempo_s,Referencia_rel_cm,Posicion_rel_cm,PWM_lin,Referencia_rot_deg,Posicion_rot_deg,PWM_rot,Angulo_pendulo_deg,Encoder_lineal_cuentas");
   tInicio = tUltimoEnvio = tUltimoPaquete = millis();
 }
 
@@ -279,7 +300,8 @@ void loop() {
     Serial.print(refEcoRot, 2);        Serial.print(",");
     Serial.print(anguloRotActual, 2);  Serial.print(",");
     Serial.print(ultimoPWMRot);        Serial.print(",");
-    Serial.println(anguloPenduloActual, 2);
+    Serial.print(anguloPenduloActual, 2); Serial.print(",");
+    Serial.println(encoderLinCount);
   }
 
   // 5. LED

@@ -14,6 +14,9 @@ const int pinAIN2 = 26;
 const int pinEncA = 32;
 const int pinEncB = 33;
 
+const int pinEncLinA = 14;
+const int pinEncLinB = 27;
+
 const int PWM_FREQ_LIN_HZ = 1000;
 const int PWM_FREQ_ROT_HZ = 2000;
 const int PWM_RES_BITS    = 8;
@@ -30,10 +33,12 @@ const uint16_t N_MAX   = 2500;
 static uint32_t bt[N_MAX];
 static int16_t  buLin[N_MAX];
 static int16_t  bdist[N_MAX];
+static int32_t  bencLin[N_MAX];
 static int16_t  buRot[N_MAX];
 static int32_t  benc[N_MAX];
 
 volatile long encoderCount = 0;
+volatile long encoderLinCount = 0;
 volatile bool tick = false;
 volatile uint32_t tickTime = 0;
 
@@ -44,6 +49,13 @@ void IRAM_ATTR isrEncA() {
   bool b = digitalRead(pinEncB);
   if (a == b) encoderCount++;
   else encoderCount--;
+}
+
+void IRAM_ATTR isrEncLinA() {
+  bool a = digitalRead(pinEncLinA);
+  bool b = digitalRead(pinEncLinB);
+  if (a == b) encoderLinCount++;
+  else encoderLinCount--;
 }
 
 void IRAM_ATTR onTimerPlanta() {
@@ -102,8 +114,8 @@ void imprimirAyuda() {
   Serial.println(F("Comandos globales:"));
   Serial.println(F("  S       -> stop global (coast, ambos motores)"));
   Serial.println(F("  B       -> brake global (ambos motores)"));
-  Serial.println(F("  D       -> imprime distancia actual (mm)"));
-  Serial.println(F("  E       -> imprime conteo actual del encoder"));
+  Serial.println(F("  D       -> imprime distancia (mm) y conteo del encoder lineal"));
+  Serial.println(F("  E       -> imprime conteo actual del encoder de rotacion"));
   Serial.println(F("  ?       -> esta ayuda"));
   Serial.println(F("Caracterizacion de planta completa:"));
   Serial.println(F("  T       -> escalon simultaneo en ambos ejes, vuelca CSV"));
@@ -190,6 +202,7 @@ void correrEscalonPlanta() {
   while (Serial.available()) Serial.read();
   stopGlobal();
   encoderCount = 0;
+  encoderLinCount = 0;
 
   tick = false;
   uint32_t t0 = micros();
@@ -207,21 +220,22 @@ void correrEscalonPlanta() {
     uint32_t tms = (uint32_t)(k * TS_US / 1000);
     float u = (tms >= PRE_MS && tms < PRE_MS + STEP_MS) ? U_PCT : 0.0f;
 
-    bt[k]    = tickTime - t0;
-    bdist[k] = (int16_t)leerDistanciaMm();
-    benc[k]  = encoderCount;
-    buLin[k] = (int16_t)(u * 10);
-    buRot[k] = (int16_t)(u * 10);
+    bt[k]      = tickTime - t0;
+    bdist[k]   = (int16_t)leerDistanciaMm();
+    bencLin[k] = encoderLinCount;
+    benc[k]    = encoderCount;
+    buLin[k]   = (int16_t)(u * 10);
+    buRot[k]   = (int16_t)(u * 10);
 
     aplicarPWMLineal(u);
     aplicarPWMRotacion(u);
   }
   stopGlobal();
 
-  Serial.println(F("k,t_us,u_pct_lin,dist_mm,u_pct_rot,enc_count"));
+  Serial.println(F("k,t_us,u_pct_lin,dist_mm,enc_lin_count,u_pct_rot,enc_count"));
   for (uint16_t k = 0; k < n; k++) {
-    Serial.printf("%u,%lu,%.1f,%d,%.1f,%ld\n", k, (unsigned long)bt[k],
-                  buLin[k] / 10.0f, bdist[k], buRot[k] / 10.0f, (long)benc[k]);
+    Serial.printf("%u,%lu,%.1f,%d,%ld,%.1f,%ld\n", k, (unsigned long)bt[k],
+                  buLin[k] / 10.0f, bdist[k], (long)bencLin[k], buRot[k] / 10.0f, (long)benc[k]);
   }
   Serial.println(F("# DONE"));
 }
@@ -281,7 +295,9 @@ void procesarLinea(String linea) {
     return;
   } else if (c == 'D' || c == 'd') {
     Serial.print(F("dist_mm="));
-    Serial.println(leerDistanciaMm());
+    Serial.print(leerDistanciaMm());
+    Serial.print(F(" enc_lin_count="));
+    Serial.println(encoderLinCount);
     return;
   } else if (c == 'E' || c == 'e') {
     Serial.print(F("enc_count="));
@@ -316,6 +332,10 @@ void setup() {
   pinMode(pinEncA, INPUT_PULLUP);
   pinMode(pinEncB, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(pinEncA), isrEncA, CHANGE);
+
+  pinMode(pinEncLinA, INPUT_PULLUP);
+  pinMode(pinEncLinB, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(pinEncLinA), isrEncLinA, CHANGE);
 
 #if defined(ESP_ARDUINO_VERSION) && ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
   tmrPlanta = timerBegin(1000000);

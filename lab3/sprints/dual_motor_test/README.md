@@ -39,6 +39,8 @@ durante estas pruebas.
 | STBY | 4 | **Compartido** entre ambos canales |
 | ENC_A (rotación) | 32 | Encoder cuadratura |
 | ENC_B (rotación) | 33 | Encoder cuadratura |
+| ENC_A (lineal) | 14 | Encoder cuadratura, sensor adicional (VL53L0X sigue siendo la referencia) |
+| ENC_B (lineal) | 27 | Encoder cuadratura, sensor adicional |
 | SDA / SCL (VL53L0X) | 21 / 22 | I2C, distancia lineal |
 
 El DRV8833 no tiene pin PWM dedicado: la velocidad se logra aplicando PWM
@@ -71,7 +73,7 @@ comportamiento de cada motor no cambie al correr junto al otro.
 ### Globales
 - `S` — stop global (coast, ambos motores)
 - `B` — brake global (ambos motores)
-- `D` — imprime distancia lineal actual (mm, VL53L0X)
+- `D` — imprime distancia lineal actual (mm, VL53L0X) y conteo del encoder lineal
 - `E` — imprime conteo actual del encoder de rotación
 - `?` — imprime esta ayuda
 
@@ -80,9 +82,9 @@ comportamiento de cada motor no cambie al correr junto al otro.
   mismo perfil reposo→escalón→reposo que los sprints individuales) y
   vuelca un único CSV con ambas salidas:
   ```
-  k,t_us,u_pct_lin,dist_mm,u_pct_rot,enc_count
-  0,0,30.0,120,30.0,0
-  1,10000,30.0,118,30.0,4
+  k,t_us,u_pct_lin,dist_mm,enc_lin_count,u_pct_rot,enc_count
+  0,0,30.0,120,0,30.0,0
+  1,10000,30.0,118,3,30.0,4
   ...
   # DONE
   ```
